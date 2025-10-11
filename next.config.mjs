@@ -54,8 +54,8 @@ const nextConfig = {
           return base.join('; ')
         })(),
       },
-      // Loosen COOP/COEP in development to support Firebase popup auth
-      !isProd ? { key: 'Cross-Origin-Opener-Policy', value: 'unsafe-none' } : { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
+      // Allow Firebase popup auth in both dev and production
+      { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
       !isProd ? { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' } : null,
     ].filter(Boolean)
     return [

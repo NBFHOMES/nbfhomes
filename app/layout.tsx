@@ -13,7 +13,6 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "StayHub - Premium Hotel Booking Platform",
   description: "Discover and enquire with verified premium hotels worldwide through StayHub.",
-  generator: "v0.app",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",

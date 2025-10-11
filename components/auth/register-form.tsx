@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, EyeOff, Mail, Lock, Phone } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { createUserWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
+import { useGoogleAuth } from "@/hooks/use-google-auth"
 
 export function RegisterForm() {
   const [showPassword, setShowPassword] = React.useState(false)
@@ -24,6 +25,41 @@ export function RegisterForm() {
     confirmPassword: ""
   })
   const router = useRouter()
+
+  const createUserInMongoDB = async (user: any) => {
+    const mongoUserData = {
+      uid: user.uid,
+      displayName: user.displayName || '',
+      email: user.email || '',
+      photoURL: user.photoURL || '',
+      role: 'guest',
+      status: 'active'
+    }
+
+    const response = await fetch('/api/users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(mongoUserData),
+    })
+
+    if (!response.ok) {
+      console.error('Failed to create user in database')
+      // Don't fail the registration, just log the error
+    }
+  }
+
+  const { signInWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth({
+    onSuccess: async (user) => {
+      await createUserInMongoDB(user)
+      toast.success("Account created successfully with Google!")
+      router.push("/")
+    },
+    onError: (error) => {
+      console.error('Google sign up error:', error)
+    }
+  })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
@@ -80,44 +116,7 @@ export function RegisterForm() {
     }
   }
 
-  const handleGoogleSignUp = async () => {
-    setIsLoading(true)
-    try {
-      const provider = new GoogleAuthProvider()
-      const result = await signInWithPopup(auth, provider)
-      const user = result.user
 
-      // Create user in MongoDB
-      const mongoUserData = {
-        uid: user.uid,
-        displayName: user.displayName || '',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-        role: 'guest',
-        status: 'active'
-      }
-
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(mongoUserData),
-      })
-
-      if (!response.ok) {
-        console.error('Failed to create user in database')
-        // Don't fail the registration, just log the error
-      }
-
-      toast.success("Account created successfully with Google!")
-      router.push("/")
-    } catch (error: any) {
-      toast.error(error.message || "Failed to sign up with Google")
-    } finally {
-      setIsLoading(false)
-    }
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -257,7 +256,7 @@ export function RegisterForm() {
         </div>
       </div>
 
-      <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={isLoading}>
+      <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={isLoading || isGoogleLoading}>
         {isLoading ? "Creating Account..." : "Create Account"}
       </Button>
 
@@ -274,8 +273,8 @@ export function RegisterForm() {
         variant="outline" 
         type="button" 
         className="w-full h-12 bg-transparent"
-        onClick={handleGoogleSignUp}
-        disabled={isLoading}
+        onClick={signInWithGoogle}
+        disabled={isLoading || isGoogleLoading}
       >
         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
           <path
@@ -295,7 +294,7 @@ export function RegisterForm() {
             fill="#EA4335"
           />
         </svg>
-        Sign up with Google
+        {isGoogleLoading ? "Creating Account..." : "Sign up with Google"}
       </Button>
     </form>
   )

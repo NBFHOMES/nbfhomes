@@ -7,9 +7,10 @@ import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Eye, EyeOff, Mail, Lock } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from "firebase/auth"
+import { signInWithEmailAndPassword } from "firebase/auth"
 import { auth } from "@/lib/firebase"
 import { toast } from "sonner"
+import { useGoogleAuth } from "@/hooks/use-google-auth"
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = React.useState(false)
@@ -17,6 +18,16 @@ export function LoginForm() {
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const router = useRouter()
+
+  const { signInWithGoogle, isLoading: isGoogleLoading } = useGoogleAuth({
+    onSuccess: () => {
+      toast.success("Successfully signed in with Google!")
+      router.push("/")
+    },
+    onError: (error) => {
+      console.error('Google sign in error:', error)
+    }
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,22 +48,7 @@ export function LoginForm() {
     }
   }
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true)
-    try {
-      const provider = new GoogleAuthProvider()
-      await signInWithPopup(auth, provider)
-      toast.success("Successfully signed in with Google!")
-      router.push("/")
-    } catch (error: any) {
-      if (process.env.NODE_ENV !== 'production') {
-        console.error('[Login] Google popup error:', error?.code, error?.message)
-      }
-      toast.error(error.message || "Failed to sign in with Google")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -111,7 +107,7 @@ export function LoginForm() {
         </Button>
       </div>
 
-      <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={isLoading}>
+      <Button type="submit" className="w-full h-12 bg-primary hover:bg-primary/90" disabled={isLoading || isGoogleLoading}>
         {isLoading ? "Signing in..." : "Sign In"}
       </Button>
 
@@ -128,8 +124,8 @@ export function LoginForm() {
         variant="outline" 
         type="button" 
         className="w-full h-12 bg-transparent"
-        onClick={handleGoogleSignIn}
-        disabled={isLoading}
+        onClick={signInWithGoogle}
+        disabled={isLoading || isGoogleLoading}
       >
         <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
           <path
@@ -149,7 +145,7 @@ export function LoginForm() {
             fill="#EA4335"
           />
         </svg>
-        Sign in with Google
+        {isGoogleLoading ? "Signing in..." : "Sign in with Google"}
       </Button>
     </form>
   )
