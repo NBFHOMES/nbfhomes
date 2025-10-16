@@ -47,13 +47,13 @@ export function Navbar() {
               Home
             </Link>
             <Link href="/hotels" className="text-sm font-medium hover:text-primary transition-colors">
-              Hotels
+              Properties
             </Link>
             <Link
               href="/become-partner"
               className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
             >
-              Become a Partner
+              Post Properties
             </Link>
             {user && (
               <>
@@ -112,9 +112,9 @@ export function Navbar() {
                     <Button variant="ghost" asChild>
                       <Link href="/login">Sign In</Link>
                     </Button>
-                    <Button asChild>
+                    {/* <Button asChild>
                       <Link href="/register">Sign Up</Link>
-                    </Button>
+                    </Button> */}
                   </div>
                 )}
               </>
@@ -168,9 +168,9 @@ export function Navbar() {
                   <Button variant="ghost" className="w-full justify-start" asChild>
                     <Link href="/login">Sign In</Link>
                   </Button>
-                  <Button className="w-full" asChild>
+                  {/* <Button className="w-full" asChild>
                     <Link href="/register">Sign Up</Link>
-                  </Button>
+                  </Button> */}
                 </div>
               )}
             </div>

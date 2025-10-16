@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Star, Wifi, Car, Coffee, Dumbbell } from "lucide-react"
 import Link from "next/link"
 import Image from "next/image"
-import { auth } from "@/lib/firebase"
+import { useAuth } from "@/lib/auth-context"
 import FraudAlertPopup from "@/components/fraud-alert-popup"
 import OwnerDetailsPopup from "@/components/owner-details-popup"
+import { LoginDialog } from "@/components/auth/login-dialog"
 import { toast } from "sonner"
 
 interface Hotel {
@@ -43,8 +44,10 @@ export function FeaturedHotels() {
   const [loading, setLoading] = useState(true)
   const [showFraudAlert, setShowFraudAlert] = useState(false)
   const [showOwnerDetails, setShowOwnerDetails] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
   const [ownerDetails, setOwnerDetails] = useState<any>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     fetchHotels()
@@ -63,6 +66,12 @@ export function FeaturedHotels() {
   }
 
   const handleEnquiry = async (hotel: Hotel) => {
+    // Check if user is logged in
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+    
     setSelectedHotel(hotel)
     setShowFraudAlert(true)
   }
@@ -124,7 +133,7 @@ export function FeaturedHotels() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Featured <span className="text-gradient">Hotels</span>
+            Featured <span className="text-gradient">Properties</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Discover our handpicked selection of premium accommodations worldwide
@@ -144,7 +153,7 @@ export function FeaturedHotels() {
                <Card key={hotel._id} className="overflow-hidden hover:shadow-lg transition-shadow group border py-0">
                   <figure className="relative mb-2 aspect-3/2 w-full">
                     <Image
-                      src={hotel.images[0]?.url || "/placeholder.jpg"}
+                      src={hotel.images[0]?.url}
                       alt={hotel.images[0]?.alt || hotel.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -241,6 +250,12 @@ export function FeaturedHotels() {
           }}
         />
       )}
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
+      />
     </section>
   )
 }

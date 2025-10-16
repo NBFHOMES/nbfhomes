@@ -25,10 +25,11 @@ import {
   Globe,
   Check
 } from "lucide-react"
-import { auth } from "@/lib/firebase"
+import { useAuth } from "@/lib/auth-context"
 import { SharePopup } from "@/components/share-popup"
 import FraudAlertPopup from "@/components/fraud-alert-popup"
 import OwnerDetailsPopup from "@/components/owner-details-popup"
+import { LoginDialog } from "@/components/auth/login-dialog"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { toast } from "sonner"
@@ -96,7 +97,9 @@ export default function HotelDetailsPage() {
   const [showSharePopup, setShowSharePopup] = useState(false)
   const [showFraudAlert, setShowFraudAlert] = useState(false)
   const [showOwnerDetails, setShowOwnerDetails] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [ownerDetails, setOwnerDetails] = useState<any>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     fetchHotel()
@@ -120,6 +123,13 @@ export default function HotelDetailsPage() {
 
   const handleEnquiry = () => {
     if (!hotel) return
+    
+    // Check if user is logged in
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+    
     setShowFraudAlert(true)
   }
 
@@ -602,6 +612,12 @@ export default function HotelDetailsPage() {
           description={`${hotel.description} Located in ${hotel.location.city}, ${hotel.location.country}. Rated ${hotel.rating.toFixed(1)} stars with ${hotel.reviewCount} reviews.`}
         />
       )}
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
+      />
 
       <Footer />
     </div>

@@ -26,41 +26,41 @@ const sidebarItems = [
     href: "/partner/properties",
     icon: Building2,
   },
-  {
-    title: "Bookings",
-    href: "/partner/bookings",
-    icon: Calendar,
-  },
-  {
-    title: "Revenue",
-    href: "/partner/revenue",
-    icon: DollarSign,
-  },
-  {
-    title: "Analytics",
-    href: "/partner/analytics",
-    icon: BarChart3,
-  },
-  {
-    title: "Reviews",
-    href: "/partner/reviews",
-    icon: Star,
-  },
-  {
-    title: "Messages",
-    href: "/partner/messages",
-    icon: MessageSquare,
-  },
-  {
-    title: "Guests",
-    href: "/partner/guests",
-    icon: Users,
-  },
-  {
-    title: "Settings",
-    href: "/partner/settings",
-    icon: Settings,
-  },
+  // {
+  //   title: "Bookings",
+  //   href: "/partner/bookings",
+  //   icon: Calendar,
+  // },
+  // {
+  //   title: "Revenue",
+  //   href: "/partner/revenue",
+  //   icon: DollarSign,
+  // },
+  // {
+  //   title: "Analytics",
+  //   href: "/partner/analytics",
+  //   icon: BarChart3,
+  // },
+  // {
+  //   title: "Reviews",
+  //   href: "/partner/reviews",
+  //   icon: Star,
+  // },
+  // {
+  //   title: "Messages",
+  //   href: "/partner/messages",
+  //   icon: MessageSquare,
+  // },
+  // {
+  //   title: "Guests",
+  //   href: "/partner/guests",
+  //   icon: Users,
+  // },
+  // {
+  //   title: "Settings",
+  //   href: "/partner/settings",
+  //   icon: Settings,
+  // },
 ]
 
 export function PartnerSidebar() {
@@ -75,7 +75,7 @@ export function PartnerSidebar() {
           </div>
           <div>
             <h2 className="font-semibold">Partner Portal</h2>
-            <p className="text-sm text-muted-foreground">Grand Palace Hotel</p>
+            <p className="text-sm text-muted-foreground">{Users.displayName}</p>
           </div>
         </div>
 

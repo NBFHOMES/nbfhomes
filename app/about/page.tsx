@@ -2,7 +2,7 @@ import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Users, Building2, Globe, Award } from "lucide-react"
+import { Users, Building2, Shield, Award, HeadphonesIcon, CheckCircle } from "lucide-react"
 
 export default function AboutPage() {
   return (
@@ -14,18 +14,17 @@ export default function AboutPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                About <span className="text-gradient">NBFHOMES</span>
+                About <span className="text-gradient">NBFHomes</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8">
-                We're revolutionizing the way people discover and book premium accommodations worldwide. 
-                Our platform connects travelers with exceptional properties and trusted hosts.
+                NBFHomes is simplifying how people find and rent rooms, PGs, and homes in their city — quickly, safely, and without brokers.
               </p>
             </div>
           </div>
         </section>
 
         {/* Stats Section */}
-        <section className="py-16">
+        {/* <section className="py-16">
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
               <div className="text-center">
@@ -58,7 +57,7 @@ export default function AboutPage() {
               </div>
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* Mission Section */}
         <section className="py-16 bg-muted/20">
@@ -67,7 +66,7 @@ export default function AboutPage() {
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
                 <p className="text-muted-foreground text-lg">
-                  To make exceptional travel experiences accessible to everyone through our trusted platform.
+                  Our mission is to make finding affordable and verified rental spaces easier for students, working professionals, and families.
                 </p>
               </div>
 
@@ -75,11 +74,11 @@ export default function AboutPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                      <Building2 className="h-6 w-6 text-primary" />
+                      <Shield className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">Quality Properties</h3>
+                    <h3 className="font-semibold mb-2">Verified Properties</h3>
                     <p className="text-sm text-muted-foreground">
-                      We carefully vet every property to ensure the highest standards of quality and comfort.
+                      Every property is verified for safety, comfort, and affordability.
                     </p>
                   </CardContent>
                 </Card>
@@ -91,7 +90,7 @@ export default function AboutPage() {
                     </div>
                     <h3 className="font-semibold mb-2">Trusted Community</h3>
                     <p className="text-sm text-muted-foreground">
-                      Building a community of verified hosts and satisfied guests through transparency and trust.
+                      We're building a trusted community of verified owners and happy tenants.
                     </p>
                   </CardContent>
                 </Card>
@@ -99,11 +98,11 @@ export default function AboutPage() {
                 <Card>
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
-                      <Award className="h-6 w-6 text-primary" />
+                      <CheckCircle className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">Excellence</h3>
+                    <h3 className="font-semibold mb-2">Simple & Reliable</h3>
                     <p className="text-sm text-muted-foreground">
-                      Committed to delivering exceptional service and memorable experiences for every guest.
+                      We aim to make every rental experience simple, transparent, and reliable.
                     </p>
                   </CardContent>
                 </Card>
@@ -122,38 +121,38 @@ export default function AboutPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4">
-                  <Badge variant="secondary" className="mb-2">Trust & Safety</Badge>
-                  <h3 className="text-xl font-semibold">Security First</h3>
+                  <Badge variant="secondary" className="mb-2">No Brokers</Badge>
+                  <h3 className="text-xl font-semibold">Direct Connection</h3>
                   <p className="text-muted-foreground">
-                    We prioritize the safety and security of our users through verified profiles, 
-                    secure payments, and comprehensive fraud protection.
+                    Connect directly with property owners without any middlemen or broker fees. 
+                    Save money and get transparent pricing.
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <Badge variant="secondary" className="mb-2">Innovation</Badge>
-                  <h3 className="text-xl font-semibold">Cutting-Edge Technology</h3>
+                  <Badge variant="secondary" className="mb-2">Verified Listings</Badge>
+                  <h3 className="text-xl font-semibold">Safety & Trust</h3>
                   <p className="text-muted-foreground">
-                    Leveraging the latest technology to provide seamless booking experiences 
-                    and innovative features for our users.
+                    Every property is verified for safety, comfort, and affordability. 
+                    We ensure genuine listings to protect you from fraud.
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <Badge variant="secondary" className="mb-2">Customer Focus</Badge>
-                  <h3 className="text-xl font-semibold">24/7 Support</h3>
+                  <Badge variant="secondary" className="mb-2">24/7 Support</Badge>
+                  <h3 className="text-xl font-semibold">Always Here to Help</h3>
                   <p className="text-muted-foreground">
-                    Our dedicated support team is available around the clock to assist 
-                    with any questions or concerns you may have.
+                    Our support team is available 24/7 via WhatsApp or call to help you instantly. 
+                    Get quick answers to all your questions.
                   </p>
                 </div>
 
                 <div className="space-y-4">
-                  <Badge variant="secondary" className="mb-2">Global Reach</Badge>
-                  <h3 className="text-xl font-semibold">Worldwide Network</h3>
+                  <Badge variant="secondary" className="mb-2">Local Focus</Badge>
+                  <h3 className="text-xl font-semibold">City-Wide Coverage</h3>
                   <p className="text-muted-foreground">
-                    Connecting travelers with amazing properties across 180+ countries 
-                    and growing our global community every day.
+                    Find rooms, PGs, and homes in your city quickly and easily. 
+                    Perfect for students, working professionals, and families.
                   </p>
                 </div>
               </div>

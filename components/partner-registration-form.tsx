@@ -85,12 +85,6 @@ export function PartnerRegistrationForm() {
 
   const handleInitialSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    
-    if (!images.selfie || !images.aadharFront || !images.aadharBack) {
-      toast.error("Please upload all required images")
-      return
-    }
-
     setShowPopup(true)
   }
 
@@ -102,12 +96,20 @@ export function PartnerRegistrationForm() {
 
     setLoading(true)
     try {
-      // Upload images to ImageKit
-      const [selfieUpload, aadharFrontUpload, aadharBackUpload] = await Promise.all([
-        uploadToImageKit(images.selfie!),
-        uploadToImageKit(images.aadharFront!),
-        uploadToImageKit(images.aadharBack!)
-      ])
+      // Upload images to ImageKit only if provided
+      let documents = null
+      if (images.selfie && images.aadharFront && images.aadharBack) {
+        const [selfieUpload, aadharFrontUpload, aadharBackUpload] = await Promise.all([
+          uploadToImageKit(images.selfie),
+          uploadToImageKit(images.aadharFront),
+          uploadToImageKit(images.aadharBack)
+        ])
+        documents = {
+          selfie: selfieUpload.url,
+          aadharFront: aadharFrontUpload.url,
+          aadharBack: aadharBackUpload.url
+        }
+      }
 
       // Submit partner application to API
       const registrationData = {
@@ -115,11 +117,7 @@ export function PartnerRegistrationForm() {
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        documents: {
-          selfie: selfieUpload.url,
-          aadharFront: aadharFrontUpload.url,
-          aadharBack: aadharBackUpload.url
-        },
+        documents,
         agreements
       }
 
@@ -223,7 +221,7 @@ export function PartnerRegistrationForm() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Document Verification
+              Document Verification <span className="text-sm font-normal text-muted-foreground">(Optional)</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">

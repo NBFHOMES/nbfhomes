@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Star, MapPin, Wifi, Car, Coffee, Dumbbell, Heart } from "lucide-react"
-import { auth } from "@/lib/firebase"
+import { useAuth } from "@/lib/auth-context"
 import FraudAlertPopup from "@/components/fraud-alert-popup"
 import OwnerDetailsPopup from "@/components/owner-details-popup"
+import { LoginDialog } from "@/components/auth/login-dialog"
 import { toast } from "sonner"
 
 interface Hotel {
@@ -44,8 +45,10 @@ export function HotelList() {
   const [favorites, setFavorites] = useState<Set<string>>(new Set())
   const [showFraudAlert, setShowFraudAlert] = useState(false)
   const [showOwnerDetails, setShowOwnerDetails] = useState(false)
+  const [showLoginDialog, setShowLoginDialog] = useState(false)
   const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
   const [ownerDetails, setOwnerDetails] = useState<any>(null)
+  const { user } = useAuth()
 
   useEffect(() => {
     fetchHotels()
@@ -76,6 +79,12 @@ export function HotelList() {
   }
 
   const handleEnquiry = async (hotel: Hotel) => {
+    // Check if user is logged in
+    if (!user) {
+      setShowLoginDialog(true)
+      return
+    }
+    
     setSelectedHotel(hotel)
     setShowFraudAlert(true)
   }
@@ -125,9 +134,9 @@ export function HotelList() {
   if (hotels.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground mb-4">No hotels found matching your criteria.</p>
+        <p className="text-muted-foreground mb-4">No Properties found matching your criteria.</p>
         <Button asChild>
-          <Link href="/become-partner">Become a Partner</Link>
+          <Link href="/become-partner">Post Properties</Link>
         </Button>
       </div>
     )
@@ -262,6 +271,12 @@ export function HotelList() {
           }}
         />
       )}
+
+      {/* Login Dialog */}
+      <LoginDialog
+        isOpen={showLoginDialog}
+        onClose={() => setShowLoginDialog(false)}
+      />
     </div>
   )
 }

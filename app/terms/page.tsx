@@ -131,9 +131,9 @@ export default function TermsPage() {
                 <CardContent className="prose prose-sm max-w-none">
                   <p>For questions about these Terms of Service, please contact us at:</p>
                   <ul>
-                    <li>Email: legal@nbfhomes.com</li>
-                    <li>Phone: +1 (555) 123-4567</li>
-                    <li>Address: New York, NY 10001</li>
+                    <li>Email: nbfhomes@gmail.com</li>
+                    {/* <li>Phone: +1 (555) 123-4567</li>
+                    <li>Address: New York, NY 10001</li> */}
                   </ul>
                 </CardContent>
               </Card>

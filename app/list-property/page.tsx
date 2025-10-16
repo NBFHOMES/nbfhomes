@@ -16,14 +16,16 @@ export default function ListPropertyPage() {
           <div className="container mx-auto px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto text-center">
               <h1 className="text-4xl md:text-5xl font-bold mb-6">
-                List Your <span className="text-gradient">Property</span>
+                Join <span className="text-gradient">NBFHomes</span> and Start Earning
               </h1>
-              <p className="text-lg text-muted-foreground mb-8">
-                Join thousands of successful hosts and start earning from your property today. 
-                We make it easy to list, manage, and grow your hospitality business.
+              <p className="text-lg text-muted-foreground mb-4">
+                Join NBFHomes and start earning from your property today — it's quick, simple, and 100% free to list.
+              </p>
+              <p className="text-base text-muted-foreground mb-8">
+                We make it easy for local property owners to list and manage their rooms or flats effortlessly.
               </p>
               <Button size="lg" asChild>
-                <Link href="/become-partner">Get Started</Link>
+                <Link href="/become-partner">List My Property (Free)</Link>
               </Button>
             </div>
           </div>
@@ -35,9 +37,6 @@ export default function ListPropertyPage() {
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold mb-4">Why List With Us?</h2>
-                <p className="text-muted-foreground text-lg">
-                  Join our platform and unlock the potential of your property
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -46,9 +45,9 @@ export default function ListPropertyPage() {
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                       <Users className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">Global Reach</h3>
+                    <h3 className="font-semibold mb-2">Local Reach</h3>
                     <p className="text-sm text-muted-foreground">
-                      Access millions of travelers worldwide
+                      Connect with verified tenants nearby
                     </p>
                   </CardContent>
                 </Card>
@@ -58,9 +57,9 @@ export default function ListPropertyPage() {
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                       <DollarSign className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">Maximize Revenue</h3>
+                    <h3 className="font-semibold mb-2">Zero Commission (For Now)</h3>
                     <p className="text-sm text-muted-foreground">
-                      Competitive rates and dynamic pricing
+                      List completely free
                     </p>
                   </CardContent>
                 </Card>
@@ -70,9 +69,9 @@ export default function ListPropertyPage() {
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                       <Building2 className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">Easy Management</h3>
+                    <h3 className="font-semibold mb-2">Easy Dashboard</h3>
                     <p className="text-sm text-muted-foreground">
-                      Intuitive dashboard and tools
+                      Manage prices & availability easily
                     </p>
                   </CardContent>
                 </Card>
@@ -82,9 +81,9 @@ export default function ListPropertyPage() {
                     <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-4">
                       <Clock className="h-6 w-6 text-primary" />
                     </div>
-                    <h3 className="font-semibold mb-2">24/7 Support</h3>
+                    <h3 className="font-semibold mb-2">Real Support</h3>
                     <p className="text-sm text-muted-foreground">
-                      Dedicated partner support team
+                      Help via WhatsApp or call 24/7
                     </p>
                   </CardContent>
                 </Card>
@@ -99,9 +98,6 @@ export default function ListPropertyPage() {
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-12">
                 <h2 className="text-3xl font-bold mb-4">How It Works</h2>
-                <p className="text-muted-foreground text-lg">
-                  Get started in just a few simple steps
-                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -111,7 +107,7 @@ export default function ListPropertyPage() {
                   </div>
                   <h3 className="font-semibold mb-2">Create Your Listing</h3>
                   <p className="text-sm text-muted-foreground">
-                    Add photos, description, and amenities of your property
+                    Add photos, rent & amenities
                   </p>
                 </div>
 
@@ -119,9 +115,9 @@ export default function ListPropertyPage() {
                   <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold text-xl">
                     2
                   </div>
-                  <h3 className="font-semibold mb-2">Get Approved</h3>
+                  <h3 className="font-semibold mb-2">Get Verified</h3>
                   <p className="text-sm text-muted-foreground">
-                    Our team reviews and approves your listing within 24-48 hours
+                    Review in 24–48 hrs
                   </p>
                 </div>
 
@@ -131,7 +127,7 @@ export default function ListPropertyPage() {
                   </div>
                   <h3 className="font-semibold mb-2">Start Earning</h3>
                   <p className="text-sm text-muted-foreground">
-                    Receive bookings and start earning from your property
+                    Go live & get bookings
                   </p>
                 </div>
               </div>
@@ -157,44 +153,10 @@ export default function ListPropertyPage() {
                   </CardHeader>
                   <CardContent>
                     <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li>• Easy listing creation and editing</li>
-                      <li>• Photo and content management</li>
+                      <li>• Easy listing creation & editing</li>
                       <li>• Availability calendar</li>
-                      <li>• Pricing controls</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      Booking Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li>• Real-time booking notifications</li>
+                      <li>• Real-time booking updates</li>
                       <li>• Guest communication tools</li>
-                      <li>• Booking status tracking</li>
-                      <li>• Payment processing</li>
-                    </ul>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-green-500" />
-                      Analytics & Insights
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2 text-sm text-muted-foreground">
-                      <li>• Revenue tracking and reports</li>
-                      <li>• Occupancy rate analytics</li>
-                      <li>• Performance metrics</li>
-                      <li>• Market insights</li>
                     </ul>
                   </CardContent>
                 </Card>
@@ -209,9 +171,6 @@ export default function ListPropertyPage() {
                   <CardContent>
                     <ul className="space-y-2 text-sm text-muted-foreground">
                       <li>• 24/7 partner support</li>
-                      <li>• Marketing assistance</li>
-                      <li>• Best practice guides</li>
-                      <li>• Community forums</li>
                     </ul>
                   </CardContent>
                 </Card>
@@ -226,14 +185,11 @@ export default function ListPropertyPage() {
             <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl font-bold mb-4">Ready to Get Started?</h2>
               <p className="text-lg mb-8 opacity-90">
-                Join thousands of successful hosts and start earning from your property today.
+                Start earning from your property today — it's quick, simple, and 100% free to list.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" variant="secondary" asChild>
-                  <Link href="/become-partner">List Your Property</Link>
-                </Button>
-                <Button size="lg" variant="outline" asChild>
-                  <Link href="/contact">Contact Sales</Link>
+                  <Link href="/become-partner">List My Property (Free)</Link>
                 </Button>
               </div>
             </div>

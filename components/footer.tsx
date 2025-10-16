@@ -18,21 +18,28 @@ export function Footer() {
               <span className="text-xl font-bold text-gradient">NBFHOMES</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              NBFHOMES is your trusted partner for premium hotel bookings worldwide. Discover exceptional stays and create unforgettable memories.
+            Find Your Perfect Room / PG / Flat
+            Discover verified and affordable rooms, PGs, and shared apartments near you.
             </p>
             <div className="flex space-x-4">
+              <Link href="https://www.facebook.com/share/1EQ6RyzCh9/" target="_blank">
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Facebook className="h-4 w-4" />
               </Button>
+              </Link>
+              <Link href="https://x.com/nbfhomes?t=F6oPUoAjxMZNm6dEKXJ6cA&s=09" target="_blank">
               <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Twitter className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <Instagram className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              </Link>
+              <Link href="https://www.instagram.com/nbfhomes?igsh=djhqOGFxZ3B0YTdm" target="_blank">
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Instagram className="h-4 w-4" />
+                </Button>
+              </Link>
+              {/* <Button variant="ghost" size="icon" className="h-8 w-8">
                 <Linkedin className="h-4 w-4" />
-              </Button>
+              </Button> */}
             </div>
           </div>
 
@@ -66,21 +73,21 @@ export function Footer() {
             <div className="space-y-3 text-sm">
               <div className="flex items-center space-x-2 text-muted-foreground">
                 <Mail className="h-4 w-4" />
-                <span>support@nbfhomes.com</span>
+                <span>nbfhomes@gmail.com</span>
               </div>
-              <div className="flex items-center space-x-2 text-muted-foreground">
+              {/* <div className="flex items-center space-x-2 text-muted-foreground">
                 <Phone className="h-4 w-4" />
                 <span>+1 (555) 123-4567</span>
-              </div>
-              <div className="flex items-center space-x-2 text-muted-foreground">
+              </div> */}
+              {/* <div className="flex items-center space-x-2 text-muted-foreground">
                 <MapPin className="h-4 w-4" />
                 <span>New York, NY 10001</span>
-              </div>
+              </div> */}
             </div>
-            
+
             {/* Newsletter Signup */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">Newsletter</p>
+              <p className="text-sm font-medium">Subscribe</p>
               <div className="flex space-x-2">
                 <Input placeholder="Your email" className="h-9" />
                 <Button size="sm">Subscribe</Button>
@@ -92,7 +99,7 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t py-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
           <p className="text-sm text-muted-foreground">
-            © 2024 NBFHOMES. All rights reserved.
+            © 2025 NBFHOMES. All rights reserved.
           </p>
           <div className="flex space-x-6 text-sm">
             <Link href="/privacy" className="text-muted-foreground hover:text-primary transition-colors">

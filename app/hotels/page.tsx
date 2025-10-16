@@ -11,9 +11,10 @@ export default function HotelsPage() {
       <main className="flex-1 container mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2">
-            Find Your Perfect <span className="text-gradient">Hotel</span>
+            Find Your Perfect <span className="text-gradient">Porperties</span>
           </h1>
-          <p className="text-muted-foreground">Discover amazing hotels and accommodations for your next trip</p>
+          <p className="text-muted-foreground">Find Your Perfect Room / PG / Flat
+          Discover verified and affordable rooms, PGs, and shared apartments near you.</p>
         </div>
 
         <HotelSearch />

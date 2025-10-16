@@ -32,9 +32,9 @@ export function HeroSection() {
             Find Your Perfect
             <span className="text-gradient block">Stay</span>
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground mb-8 text-pretty max-w-2xl mx-auto">
-            Discover premium hotels and accommodations worldwide. Book with confidence and enjoy exceptional
-            hospitality.
+          <p className="text-lg md:text-xl font-bold-500 text-foreground/90 mb-8 text-pretty max-w-2xl mx-auto">
+            Find Your Perfect Room / PG / Flat
+            Discover verified and affordable rooms, PGs, and shared apartments near you.
           </p>
         </div>
 
@@ -88,24 +88,24 @@ export function HeroSection() {
         </Card>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-3xl mx-auto">
+        {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16 max-w-3xl mx-auto">
           <div className="text-center">
             <div className="text-2xl md:text-3xl font-bold text-primary mb-2">50K+</div>
             <div className="text-sm text-muted-foreground">Hotels Worldwide</div>
-          </div>
-          <div className="text-center">
+          </div> */}
+          {/* <div className="text-center">
             <div className="text-2xl md:text-3xl font-bold text-primary mb-2">2M+</div>
             <div className="text-sm text-muted-foreground">Happy Customers</div>
-          </div>
-          <div className="text-center">
+          </div> */}
+          {/* <div className="text-center">
             <div className="text-2xl md:text-3xl font-bold text-primary mb-2">180+</div>
             <div className="text-sm text-muted-foreground">Countries</div>
-          </div>
-          <div className="text-center">
+          </div> */}
+          {/* <div className="text-center">
             <div className="text-2xl md:text-3xl font-bold text-primary mb-2">24/7</div>
             <div className="text-sm text-muted-foreground">Support</div>
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
       </div>
     </section>
   )

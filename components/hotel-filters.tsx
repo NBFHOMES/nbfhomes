@@ -18,7 +18,7 @@ export function HotelFilters() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <Slider value={priceRange} onValueChange={setPriceRange} max={1000} min={0} step={10} className="w-full" />
+            <Slider value={priceRange} onValueChange={setPriceRange} max={100000} min={100} step={10} className="w-full" />
             <div className="flex justify-between text-sm text-muted-foreground">
               <span>₹{priceRange[0].toLocaleString('en-IN')}</span>
               <span>₹{priceRange[1].toLocaleString('en-IN')}</span>
