@@ -10,9 +10,9 @@ const PartnerApplicationSchema = new mongoose.Schema({
 
   // Document URLs (stored in ImageKit)
   documents: {
-    selfie: { type: String, required: true },
-    aadharFront: { type: String, required: true },
-    aadharBack: { type: String, required: true }
+    selfie: { type: String, required: false },
+    aadharFront: { type: String, required: false },
+    aadharBack: { type: String, required: false }
   },
 
   // Agreements

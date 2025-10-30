@@ -13,7 +13,7 @@ const createApplicationSchema = z.object({
     selfie: z.string().url(),
     aadharFront: z.string().url(),
     aadharBack: z.string().url()
-  }),
+  }).partial().optional(),
   agreements: z.object({
     terms: z.boolean(),
     privacy: z.boolean(),
@@ -73,6 +73,10 @@ export async function POST(request: NextRequest) {
     await connectDB()
 
     const body = await request.json()
+    // Normalize documents: drop if null/undefined or any field missing/empty
+    if (!body.documents || !body.documents.selfie || !body.documents.aadharFront || !body.documents.aadharBack) {
+      delete body.documents
+    }
     const data = createApplicationSchema.parse(body)
 
     // Check if user already has a pending application
@@ -88,16 +92,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const application = new PartnerApplication({
+    const applicationPayload: any = {
       userId: user.uid,
       firstName: data.firstName,
       lastName: data.lastName,
       email: data.email,
       phone: data.phone,
-      documents: data.documents,
       agreements: data.agreements,
       status: 'pending_review'
-    })
+    }
+    if (data.documents) {
+      applicationPayload.documents = data.documents
+    }
+
+    const application = new PartnerApplication(applicationPayload)
 
     await application.save()
 

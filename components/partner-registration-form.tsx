@@ -97,7 +97,7 @@ export function PartnerRegistrationForm() {
     setLoading(true)
     try {
       // Upload images to ImageKit only if provided
-      let documents = null
+      let documents: { selfie: string; aadharFront: string; aadharBack: string } | null = null
       if (images.selfie && images.aadharFront && images.aadharBack) {
         const [selfieUpload, aadharFrontUpload, aadharBackUpload] = await Promise.all([
           uploadToImageKit(images.selfie),
@@ -112,13 +112,15 @@ export function PartnerRegistrationForm() {
       }
 
       // Submit partner application to API
-      const registrationData = {
+      const registrationData: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         phone: formData.phone,
-        documents,
         agreements
+      }
+      if (documents) {
+        registrationData.documents = documents
       }
 
       const response = await fetch('/api/partner-applications', {
