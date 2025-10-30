@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Card, CardContent } from "@/components/ui/card"
@@ -50,13 +51,20 @@ export function HotelList() {
   const [ownerDetails, setOwnerDetails] = useState<any>(null)
   const { user } = useAuth()
 
+  const searchParams = useSearchParams()
+
   useEffect(() => {
     fetchHotels()
-  }, [])
+  }, [searchParams])
 
   const fetchHotels = async () => {
     try {
-      const response = await fetch('/api/hotels')
+      const q = searchParams?.get('q') || ''
+      const category = searchParams?.get('category') || ''
+      const params = new URLSearchParams()
+      if (q) params.set('q', q)
+      if (category) params.set('category', category)
+      const response = await fetch(`/api/hotels?${params.toString()}`)
       const data = await response.json()
       setHotels(data.hotels || [])
     } catch (error) {

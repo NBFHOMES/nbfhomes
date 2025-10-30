@@ -39,6 +39,25 @@ const amenityIcons: { [key: string]: any } = {
   'Gym': Dumbbell,
 }
 
+// Fallback taglines shown when a property has no description
+const demoTaglines = [
+  'Indulge in Unmatched Comfort at the Heart of Every Destination.',
+  'Experience the Perfect Blend of Comfort and Convenience.',
+  'Discover Exceptional Value in Every Stay.',
+  'Your Comfort, Our Priority.',
+  'Where Every Stay is a Story.',
+  'Experience the Difference of Quality Living.',
+  'Where Comfort Meets Convenience.',
+  'Experience the Perfect Blend of Comfort and Convenience.',
+  'Discover Exceptional Value in Every Stay.',
+  'Your Comfort, Our Priority.',
+  'Where Every Stay is a Story.',
+  'Experience the Difference of Quality Living.',
+]
+
+// If description is missing or very short, show a demo tagline instead
+const MIN_DESCRIPTION_CHARS = 20
+
 export function FeaturedHotels() {
   const [hotels, setHotels] = useState<Hotel[]>([])
   const [loading, setLoading] = useState(true)
@@ -149,8 +168,8 @@ export function FeaturedHotels() {
           </div>
         ) : (
            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-             {hotels.slice(0, 4).map((hotel) => (
-               <Card key={hotel._id} className="overflow-hidden hover:shadow-lg transition-shadow group border py-0">
+            {hotels.slice(0, 4).map((hotel, index) => (
+              <Card key={hotel._id} className="overflow-hidden hover:shadow-lg transition-shadow group border py-0 h-full flex flex-col">
                   <figure className="relative mb-2 aspect-3/2 w-full">
                     <Image
                       src={hotel.images[0]?.url}
@@ -166,33 +185,39 @@ export function FeaturedHotels() {
                    </div>
                  </figure>
 
-                   <CardContent className="px-6 py-4 space-y-4">
-                    <div>
-                      <div className="text-2xl font-bold">{hotel.name}</div>
-                      <div className="mt-2 flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`size-4 ${
-                              i < Math.floor(hotel.rating)
-                                ? "fill-current text-yellow-400"
-                                : "text-gray-300"
-                            }`}
-                          />
-                        ))}
-                        <span className="text-muted-foreground ml-2 text-sm">
-                          ({hotel.rating.toFixed(1)})
+                  <CardContent className="px-6 py-4 flex flex-col">
+                    <div className="flex-1 space-y-4">
+                      <div>
+                        <div className="text-2xl font-bold">{hotel.name}</div>
+                        <div className="mt-2 flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`size-4 ${
+                                i < Math.floor(hotel.rating)
+                                  ? "fill-current text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                          <span className="text-muted-foreground ml-2 text-sm">
+                            ({hotel.rating.toFixed(1)})
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-muted-foreground text-sm line-clamp-2 min-h-[40px]">{
+                        ((hotel.description ?? '').replace(/\s+/g, ' ').trim().length >= MIN_DESCRIPTION_CHARS)
+                          ? (hotel.description ?? '').trim()
+                          : demoTaglines[index % demoTaglines.length]
+                      }</p>
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-semibold lg:text-2xl">
+                          ₹{hotel.pricePerNight.toLocaleString('en-IN')}
                         </span>
+                        <Badge variant="secondary">Available</Badge>
                       </div>
                     </div>
-                    <p className="text-muted-foreground text-sm">{hotel.description}</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold lg:text-2xl">
-                        ₹{hotel.pricePerNight.toLocaleString('en-IN')}
-                      </span>
-                      <Badge variant="secondary">Available</Badge>
-                    </div>
-                    <div className="flex gap-2">
+                    <div className="mt-4 flex gap-2">
                       <Button
                         variant="outline"
                         className="flex-1"
@@ -206,7 +231,6 @@ export function FeaturedHotels() {
                         </Link>
                       </Button>
                     </div>
-
                   </CardContent>
               </Card>
             ))}

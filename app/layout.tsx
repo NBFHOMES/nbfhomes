@@ -11,8 +11,8 @@ import { Suspense } from "react"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "StayHub - Premium Hotel Booking Platform",
-  description: "Discover and enquire with verified premium hotels worldwide through StayHub.",
+  title: "NBFHOMES - Premium Property Finding Platform",
+  description: "Discover and enquire with verified premium properties worldwide through NBFHOMES.",
   icons: {
     icon: "/logo.png",
     shortcut: "/logo.png",

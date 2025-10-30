@@ -33,6 +33,8 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const city = searchParams.get('city')
+    const q = searchParams.get('q') || ''
+    const category = searchParams.get('category') || ''
     const minPrice = searchParams.get('minPrice')
     const maxPrice = searchParams.get('maxPrice')
     const includeInactive = searchParams.get('includeInactive') === 'true' // For admin panel
@@ -65,6 +67,25 @@ export async function GET(request: NextRequest) {
 
     if (ownerId) {
       query.ownerId = ownerId
+    }
+
+    // Text search across common fields
+    if (q && q.trim().length > 0) {
+      const regex = new RegExp(q.trim(), 'i')
+      query.$or = [
+        { name: regex },
+        { description: regex },
+        { 'location.city': regex },
+        { 'location.country': regex },
+        { 'location.address': regex },
+        { amenities: regex },
+      ]
+    }
+
+    // Category filter mapped to rooms.type (e.g., Apartment, PG, etc.)
+    if (category && category !== 'all') {
+      const categoryRegex = new RegExp(category, 'i')
+      query['rooms.type'] = categoryRegex
     }
 
     const [hotels, total] = await Promise.all([
