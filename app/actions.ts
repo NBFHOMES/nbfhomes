@@ -489,7 +489,12 @@ export async function deleteAdAction(adminUserId: string) {
 // Ad Actions
 export async function getAdSettingsAction() {
     try {
-        const supabase = await getSupabaseClient(); // Public read access
+        // Use a plain client for public data to allow SSG/ISR without cookie dependency
+        const supabase = createSupabaseClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
         const { data, error } = await supabase.from('ads').select('*').limit(1).single();
 
         if (error) {
