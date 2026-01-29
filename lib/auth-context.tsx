@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         if (userData && !userData.is_onboarded && window.location.pathname !== '/onboarding') {
                             router.replace('/onboarding');
                         } else if (userData?.is_onboarded && window.location.pathname === '/onboarding') {
-                            router.replace('/dashboard');
+                            router.replace('/'); // Fix: /dashboard does not exist, redirect to Home
                         }
                     }
                 } else {
@@ -104,7 +104,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const loginWithGoogle = async () => {
         setIsLoading(true);
-        const redirectUrl = `${window.location.origin}/auth/callback`;
+        // Explicitly point to Production URL to avoid 404s on Vercel preview/deployment mis-matches
+        let siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+        siteUrl = siteUrl.replace(/\/$/, ''); // Remove trailing slash if present
+        const redirectUrl = `${siteUrl}/auth/callback`;
         const { error } = await supabase.auth.signInWithOAuth({
             provider: 'google',
             options: {

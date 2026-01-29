@@ -39,22 +39,20 @@ export async function GET(request: NextRequest) {
         )
         const { error } = await supabase.auth.exchangeCodeForSession(code)
         if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host')
-            const isLocalEnv = process.env.NODE_ENV === 'development'
-
-            // Clean URL construction
+            // Clean URL construction to avoid duplicate codes
             let cleanNext = next;
             if (cleanNext.includes('code=')) {
                 cleanNext = '/';
             }
 
-            if (isLocalEnv) {
-                return NextResponse.redirect(`${origin}${cleanNext}`)
-            } else if (forwardedHost) {
-                return NextResponse.redirect(`https://${forwardedHost}${cleanNext}`)
-            } else {
-                return NextResponse.redirect(`${origin}${cleanNext}`)
-            }
+            // Force Redirect to Production Home to fix 404s
+            let siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+            siteUrl = siteUrl.replace(/\/$/, ''); // Remove trailing slash
+
+            // Ensure next starts with /
+            const safeNext = cleanNext.startsWith('/') ? cleanNext : `/${cleanNext}`;
+
+            return NextResponse.redirect(`${siteUrl}${safeNext}`);
         }
     }
 
