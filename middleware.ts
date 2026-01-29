@@ -60,6 +60,7 @@ export async function middleware(request: NextRequest) {
             user = data.user;
         } catch (error: any) {
             // STRICT SILENCE & SCRUB
+            // STRICT SILENCE & SCRUB
             const url = request.nextUrl.clone();
             url.pathname = '/';
             const redirectResponse = NextResponse.redirect(url);
