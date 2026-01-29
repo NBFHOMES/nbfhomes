@@ -27,19 +27,44 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
             .channel('realtime-properties')
             .on(
                 'postgres_changes',
-                { event: 'INSERT', schema: 'public', table: 'properties' },
+                { event: '*', schema: 'public', table: 'properties' },
                 (payload) => {
-                    const newProperty = payload.new as any; // Cast generic payload
-                    // Only add if approved/active (or handle via RLS policy filter if possible)
-                    if (newProperty.status === 'approved' && newProperty.available_for_sale) {
-                        setFilteredProducts((prev) => {
-                            // Optimized prepend without shake (React handles keying)
-                            const exists = prev.some(p => p.id === newProperty.id);
-                            if (exists) return prev;
-                            // Map raw DB response to Product type if needed, or rely on loose compatibility
-                            // Ideally, we'd map it fully. For now, assuming direct compatibility for speed.
-                            return [newProperty as Product, ...prev];
-                        });
+                    console.log('⚡ Realtime Event:', payload.eventType);
+
+                    if (payload.eventType === 'INSERT') {
+                        const newProperty = payload.new as any;
+                        if (newProperty.status === 'approved' && newProperty.available_for_sale) {
+                            setFilteredProducts((prev) => {
+                                if (prev.some(p => p.id === newProperty.id)) return prev;
+                                return [newProperty as Product, ...prev];
+                            });
+                        }
+                    }
+                    else if (payload.eventType === 'UPDATE') {
+                        const updatedProperty = payload.new as any;
+                        // 1. If it became Approved -> Add/Update it
+                        if (updatedProperty.status === 'approved' && updatedProperty.available_for_sale) {
+                            setFilteredProducts((prev) => {
+                                const index = prev.findIndex(p => p.id === updatedProperty.id);
+                                if (index !== -1) {
+                                    // Update existing in place to prevent jump
+                                    const newArr = [...prev];
+                                    newArr[index] = { ...newArr[index], ...updatedProperty };
+                                    return newArr;
+                                } else {
+                                    // Newly approved? Prepend it!
+                                    return [updatedProperty as Product, ...prev];
+                                }
+                            });
+                        }
+                        // 2. If it became Unapproved/Sold -> Remove it
+                        else {
+                            setFilteredProducts((prev) => prev.filter(p => p.id !== updatedProperty.id));
+                        }
+                    }
+                    else if (payload.eventType === 'DELETE') {
+                        const deletedId = payload.old.id; // Correct way to get ID on delete
+                        setFilteredProducts((prev) => prev.filter(p => p.id !== deletedId));
                     }
                 }
             )

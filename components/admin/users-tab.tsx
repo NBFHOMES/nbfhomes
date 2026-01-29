@@ -21,6 +21,8 @@ interface AdminUser {
     totalProperties: number;
     activeProperties: number;
     profession: string;
+    state?: string;
+    city?: string;
     status: string;
     is_banned?: boolean;
 }
@@ -177,6 +179,8 @@ export function UsersTab({ user }: UsersTabProps) {
                                         <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Name</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Email</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Contact</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Profession</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Location</th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Total Properties</th>
                                         <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
                                     </tr >
@@ -222,6 +226,14 @@ export function UsersTab({ user }: UsersTabProps) {
                                                             </a>
                                                         )}
                                                     </div>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                                                    {userItem.profession || '-'}
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                                                    {userItem.city || userItem.state ? (
+                                                        <span>{userItem.city}{userItem.city && userItem.state ? ', ' : ''}{userItem.state}</span>
+                                                    ) : '-'}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-900">
                                                     <button

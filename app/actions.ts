@@ -80,6 +80,20 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
         // Use context-aware client so RLS (auth.uid()) works correctly
         const supabase = await getSupabaseClient();
 
+        // Silent User Check to validate session safely
+        try {
+            // Explicitly check user to catch 'Already Used' tokens HERE
+            const { error: authError } = await supabase.auth.getUser();
+            if (authError) throw authError;
+        } catch (e: any) {
+            const m = e.message || '';
+            // If token is invalid/used, logic implies we are NOT admin (or not logged in properly)
+            if (m.includes('Rate limit') || m.includes('Refresh Token') || m.includes('Already Used')) {
+                // console.warn("checkAdminStatus auth check failed (Silenced):", m);
+                return false;
+            }
+        }
+
         // Query public.users directly for 'admin' role (Simpler & works with our new schema)
         // OR query admin_users table (which requires RLS pass)
         // Let's check BOTH for robustness
@@ -102,8 +116,11 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
         }
 
         return isAdmin;
-    } catch (error) {
-        console.error('Error checking admin status:', error);
+    } catch (error: any) {
+        const msg = error?.message || '';
+        if (!msg.includes('Rate limit') && !msg.includes('Refresh Token') && !msg.includes('Already Used')) {
+            console.error('Error checking admin status:', error);
+        }
         return false;
     }
 }
@@ -508,8 +525,12 @@ export async function getAdSettingsAction() {
         return { success: true, data };
     } catch (error: any) {
         // Handle fetch/network errors (ECONNRESET etc)
-        console.error('Exception in getAdSettingsAction:', error);
-        return { success: false, error: error.message || 'Network error' };
+        const msg = error?.message || '';
+        // Silence Auth/Rate Limit errors in terminal
+        if (!msg.includes('Rate limit') && !msg.includes('Refresh Token')) {
+            console.error('Exception in getAdSettingsAction:', error);
+        }
+        return { success: false, error: msg || 'Network error' };
     }
 }
 
@@ -606,11 +627,16 @@ export async function updateLeadStatusAction(leadId: string, status: string) {
 export async function trackLeadActivity(data: { propertyId: string, actionType: 'whatsapp' | 'contact', ownerId?: string | null }) {
     console.log(`[TrackLead] Starting for property ${data.propertyId} action ${data.actionType} owner ${data.ownerId}`);
     const supabase = await getSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
 
-    if (!user) {
-        console.error('[TrackLead] No user found');
-        return { success: false, error: 'Not authenticated' };
+    // 4. Verify Auth (Silent Check)
+    let user;
+    try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+        if (!user) return { success: false, error: 'Unauthorized' };
+    } catch (e: any) {
+        if (e?.code === 'over_request_rate_limit' || e?.status === 429) return { success: false, error: 'Rate limit: Try again' };
+        throw e;
     }
 
     // BAN CHECK
@@ -656,7 +682,17 @@ export async function trackLeadActivity(data: { propertyId: string, actionType: 
 
 export async function trackPropertyView(propertyId: string) {
     const supabase = await getSupabaseClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // 1. Get current user (with silent 429 handling)
+    let user;
+    try {
+        const { data } = await supabase.auth.getUser();
+        user = data.user;
+    } catch (e: any) {
+        if (e?.code === 'over_request_rate_limit' || e?.status === 429) {
+            return; // Fail gracefully
+        }
+        throw e;
+    }
 
     if (!user) return;
 
@@ -800,7 +836,15 @@ export async function unbanUserAction(userId: string, adminUserId: string) {
 export async function createPropertyAction(data: any) {
     try {
         const supabase = await getSupabaseClient();
-        const { data: { user } } = await supabase.auth.getUser();
+
+        let user;
+        try {
+            const { data: u } = await supabase.auth.getUser();
+            user = u.user;
+        } catch (e: any) {
+            if (e?.code === 'over_request_rate_limit' || e?.status === 429) return { success: false, error: 'Rate limit: Try again later' };
+            throw e;
+        }
 
         if (!user) {
             return { success: false, error: 'User not authenticated' };
@@ -898,6 +942,9 @@ export async function createPropertyAction(data: any) {
         return { success: true, data: insertedProperty };
 
     } catch (error: any) {
+        if (error?.code === 'over_request_rate_limit' || error?.status === 429) {
+            return { success: false, error: 'Rate limit: Try again later' };
+        }
         console.error('Error in createPropertyAction:', error);
         return { success: false, error: error.message || 'Failed to create property' };
     }

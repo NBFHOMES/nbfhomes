@@ -394,8 +394,12 @@ export async function getProducts(params?: {
   try {
     const paramsString = JSON.stringify(params || {});
     return await getCachedProductsServer(paramsString);
-  } catch (error) {
+  } catch (error: any) {
     // Fallback if cache fails severely? (Unlikely with unstable_cache, it usually re-runs)
+    const msg = error?.message || '';
+    if (!msg.includes('Rate limit') && !msg.includes('Refresh Token')) {
+      console.error("Cache Miss/Error in getProducts:", error);
+    }
     return [];
   }
 }
@@ -1026,7 +1030,7 @@ export async function trackLead(propertyId: string, type: 'contact' | 'whatsapp'
   }
 }
 
-export async function getAdminUsers(page: number = 1, limit: number = 10, search: string = ''): Promise<{ users: { userId: string; name: string; email: string; contactNumber: string; role: string; isVerified: boolean; totalProperties: number; activeProperties: number; profession: string; status: string; is_banned: boolean }[]; total: number; page: number; limit: number }> {
+export async function getAdminUsers(page: number = 1, limit: number = 10, search: string = ''): Promise<{ users: { userId: string; name: string; email: string; contactNumber: string; role: string; isVerified: boolean; totalProperties: number; activeProperties: number; profession: string; state: string; city: string; status: string; is_banned: boolean }[]; total: number; page: number; limit: number }> {
   try {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -1034,7 +1038,7 @@ export async function getAdminUsers(page: number = 1, limit: number = 10, search
     let query = supabase.from('users').select('*', { count: 'exact' });
 
     if (search) {
-      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,profession.ilike.%${search}%`);
+      query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,profession.ilike.%${search}%,city.ilike.%${search}%,state.ilike.%${search}%`);
     }
 
     const { data: profiles, count, error } = await query.range(from, to).order('created_at', { ascending: false });
@@ -1063,14 +1067,16 @@ export async function getAdminUsers(page: number = 1, limit: number = 10, search
 
       return {
         userId: profile.id,
-        name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.full_name || profile.name || profile.email?.split('@')[0] || 'N/A'),
+        name: profile.full_name || (profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.name || profile.email?.split('@')[0] || 'N/A')),
         email: profile.email || 'N/A',
-        contactNumber: profile.contact_number || profile.phone_number || 'N/A',
+        contactNumber: profile.phone_number || profile.contact_number || 'N/A',
         role: profile.role || 'user',
         isVerified: profile.is_verified || false,
         totalProperties: totalProperties || 0,
         activeProperties: activeProperties || 0,
         profession: profile.profession || '',
+        state: profile.state || '',
+        city: profile.city || '',
         status: profile.status || 'active',
         is_banned: profile.is_banned || false
       };
@@ -1088,19 +1094,39 @@ export async function getAdminUsers(page: number = 1, limit: number = 10, search
   }
 }
 
-export async function updateUserProfile(userId: string, profession: string, contactNumber: string): Promise<{ success: boolean; error?: any }> {
+export async function updateUserProfile(userId: string, data: { profession?: string; contactNumber?: string; state?: string; city?: string; full_name?: string; is_onboarded?: boolean }): Promise<{ success: boolean; error?: any }> {
   try {
-    const { error } = await supabase
-      .from('users')
-      .update({
-        profession,
-        contact_number: contactNumber,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', userId);
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    };
+    if (data.profession !== undefined) updateData.profession = data.profession;
+    if (data.contactNumber !== undefined) {
+      updateData.contact_number = data.contactNumber; // support both convention just in case
+      updateData.phone_number = data.contactNumber;
+    }
+    if (data.state !== undefined) updateData.state = data.state;
+    if (data.city !== undefined) updateData.city = data.city;
+    if (data.full_name !== undefined) updateData.full_name = data.full_name;
+    if (data.is_onboarded !== undefined) updateData.is_onboarded = data.is_onboarded;
 
-    if (error) throw error;
-    return { success: true };
+    let attempt = 0;
+    while (attempt < 2) {
+      try {
+        const { error } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', userId);
+
+        if (error) throw error;
+        return { success: true };
+      } catch (err) {
+        attempt++;
+        if (attempt >= 2) throw err;
+        if (attempt >= 2) throw err;
+        await new Promise(resolve => setTimeout(resolve, 200)); // Fast retry
+      }
+    }
+    return { success: false, error: 'Failed after retries' };
   } catch (error) {
     console.error('Error updating profile:', JSON.stringify(error, null, 2));
     return { success: false, error };

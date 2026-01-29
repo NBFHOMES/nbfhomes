@@ -42,22 +42,33 @@ export async function middleware(request: NextRequest) {
         }
     );
 
-    // OPTIMIZATION: Check for Supabase session cookie before querying Auth server
-    // This bypassed the "1155ms" delay for Guests (Non-logged in users)
-    const allCookies = request.cookies.getAll();
-    const hasSupabaseCookie = allCookies.some(c => c.name.includes('sb-') && c.name.includes('-auth-token'));
-
-    let user = null;
-
-    // Only call getUser() if we suspect a session exists OR if we are on a protected route (safety net)
-    // For protected routes, we MUST check to ensure security.
+    // OPTIMIZATION: Only call getUser() on protected routes OR if auth cookies exist.
+    // This prevents bad tokens from reaching Server Components and causing 429/400 errors.
     const protectedPaths = ['/admin', '/account', '/banned', '/post-property'];
     const path = request.nextUrl.pathname;
     const isProtected = protectedPaths.some(p => path.startsWith(p));
+    // OPTIMIZATION: Check for ANY auth cookie. If any exist, verify them.
+    // This catches partial/broken states.
+    const hasAuthCookies = request.cookies.has('sb-access-token') || request.cookies.has('sb-refresh-token');
 
-    if (hasSupabaseCookie || isProtected) {
-        const { data } = await supabase.auth.getUser();
-        user = data.user;
+    let user = null;
+
+    if (isProtected || hasAuthCookies) {
+        try {
+            const { data, error } = await supabase.auth.getUser();
+            if (error) throw error;
+            user = data.user;
+        } catch (error: any) {
+            // STRICT SILENCE & SCRUB
+            const url = request.nextUrl.clone();
+            url.pathname = '/';
+            const redirectResponse = NextResponse.redirect(url);
+
+            // Nuke both cookies to be safe
+            redirectResponse.cookies.delete('sb-access-token');
+            redirectResponse.cookies.delete('sb-refresh-token');
+            return redirectResponse;
+        }
     }
 
     if (user) {
@@ -78,13 +89,9 @@ export async function middleware(request: NextRequest) {
     } else if (isProtected) {
         // Redirect unauthenticated users trying to access protected routes
         const url = request.nextUrl.clone();
-        url.pathname = '/auth'; // Redirect to login
-        url.searchParams.set('next', path); // Preserve the intended destination
+        url.pathname = '/'; // Redirect to home
         return NextResponse.redirect(url);
     }
-
-    // If accessing /banned but not banned (or not logged in), maybe redirect? 
-    // Leaving purely as is for now to avoid over-engineering.
 
     return response;
 }

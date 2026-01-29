@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react';
 import { supabase } from '@/lib/db';
 import { User, Session } from '@supabase/supabase-js';
 import { useRouter } from 'next/navigation';
@@ -16,74 +16,82 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// GLOBAL SINGLETON: Prevent multiple checks across re-renders
+let globalAuthCheck: Promise<{ session: Session | null; user: User | null; error: any }> | null = null;
+let killSwitchActive = false;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [session, setSession] = useState<Session | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
 
+    const isCheckingRef = useRef(false);
+
     useEffect(() => {
         let mounted = true;
 
-        const verifyBanStatus = async (uid: string) => {
-            // Check public.users first (Primary Source)
-            const { data: userData } = await supabase
-                .from('users')
-                .select('is_banned')
-                .eq('id', uid)
-                .single();
+        // CHECK KILL SWITCH
+        const killUntil = typeof window !== 'undefined' ? localStorage.getItem('auth_kill_switch') : null;
+        if (killUntil && parseInt(killUntil) > Date.now()) {
+            console.warn('❄️ Auth Check Frozen by Kill Switch.');
+            killSwitchActive = true;
+            setIsLoading(false);
+            return;
+        }
 
-            if (userData?.is_banned) {
-                if (mounted) {
-                    await supabase.auth.signOut();
-                    window.location.href = '/banned';
-                }
-                return true;
-            }
-            return false;
-        };
-
-        const checkUser = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession();
-                if (mounted && session?.user) {
-                    // Check ban status only if we have a session
-                    const isBanned = await verifyBanStatus(session.user.id);
-                    if (isBanned) return;
-
-                    setSession(session);
-                    setUser(session.user);
-                }
-            } catch (error) {
-                console.error("Auth check failed:", error);
-            } finally {
-                if (mounted) setIsLoading(false);
-            }
-        };
-
-        checkUser();
-
-        // Listen for auth changes
+        // INITIAL LOAD + LISTENER (The Correct Supabase Patter)
+        // We do NOT call getSession() explicitly to avoid "Invalid Refresh Token: Already Used" race conditions.
+        // onAuthStateChange fires 'INITIAL_SESSION' immediately on mount.
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-            if (process.env.NODE_ENV === 'development') {
-                console.log('Auth State Change:', event, session?.user?.email);
-            }
-
-            if (event === 'SIGNED_IN') {
-                router.refresh(); // Soft refresh to update server components
-            } else if (event === 'SIGNED_OUT') {
-                router.refresh();
-                setUser(null);
-                setSession(null);
-            }
+            // console.log(`Auth State Change: ${event}`); // Silenced
 
             if (mounted) {
-                if (session?.user) {
-                    const isBanned = await verifyBanStatus(session.user.id);
-                    if (isBanned) return;
+                // 1. HANDLE SESSION
+                if (session) {
+                    setSession(session);
+                    setUser(session.user);
+
+                    // Check for Ban Status / Onboarding ONLY if not already checked recently
+                    // To avoid spamming DB on every event, we could cache this, but for now strict security is better.
+                    // We only check if we are NOT on a special page.
+                    if (window.location.pathname !== '/banned') {
+                        const { data: userData, error } = await supabase
+                            .from('users')
+                            .select('is_banned, is_onboarded')
+                            .eq('id', session.user.id)
+                            .maybeSingle();
+
+                        // KILL SWITCH LOGIC (Integrated here for non-auth errors that might occur during user fetch)
+                        if (error && (error.code === '429' || error.message?.includes('Rate limit'))) {
+                            // Activate Kill Switch
+                            if (typeof window !== 'undefined') {
+                                localStorage.setItem('auth_kill_switch', (Date.now() + 30000).toString());
+                                localStorage.clear();
+                                window.location.reload();
+                            }
+                            return;
+                        }
+
+                        if (userData?.is_banned) {
+                            await supabase.auth.signOut();
+                            window.location.href = '/banned';
+                            return;
+                        }
+
+                        // Onboarding Redirect
+                        if (userData && !userData.is_onboarded && window.location.pathname !== '/onboarding') {
+                            router.replace('/onboarding');
+                        } else if (userData?.is_onboarded && window.location.pathname === '/onboarding') {
+                            router.replace('/dashboard');
+                        }
+                    }
+                } else {
+                    // No Session
+                    setSession(null);
+                    setUser(null);
                 }
-                setSession(session);
-                setUser(session?.user ?? null);
+
                 setIsLoading(false);
             }
         });
@@ -92,64 +100,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             mounted = false;
             subscription.unsubscribe();
         };
-    }, [router]);
+    }, []);
 
     const loginWithGoogle = async () => {
         setIsLoading(true);
-        // PWA Requirement: Explicit redirect URL to avoid popup issues
         const redirectUrl = `${window.location.origin}/auth/callback`;
-
-        const attemptLogin = async (retryCount = 0) => {
-            try {
-                // Loading Guard: 15 seconds timeout
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('TIMEOUT')), 15000)
-                );
-
-                const loginPromise = supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: redirectUrl,
-                        skipBrowserRedirect: false, // Ensure full redirect for PWA
-                        flowType: 'pkce', // Force PKCE flow for better stability
-                    } as any,
-                });
-
-                const result: any = await Promise.race([loginPromise, timeoutPromise]);
-                const { error } = result;
-
-                if (error) throw error;
-
-            } catch (error: any) {
-                console.error('Login attempt failed:', error);
-
-                // Timeout Error
-                if (error.message === 'TIMEOUT') {
-                    toast.error("Google Server busy, try again");
-                    setIsLoading(false);
-                    return;
-                }
-
-                // Retry Logic (one retry after 2 seconds)
-                if (retryCount < 1) {
-                    console.log('Retrying login in 2 seconds...');
-                    setTimeout(() => attemptLogin(retryCount + 1), 2000);
-                    return;
-                }
-
-                // Final Error Handling
-                toast.error(error.message || "Failed to connect to Google");
-                setIsLoading(false);
-            }
-        };
-
-        attemptLogin();
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: redirectUrl,
+                skipBrowserRedirect: false,
+                flowType: 'pkce',
+            } as any,
+        });
+        if (error) {
+            toast.error(error.message);
+            setIsLoading(false);
+        }
     };
 
     const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) console.error('Error logging out:', error);
-
+        await supabase.auth.signOut();
         setUser(null);
         setSession(null);
         router.refresh();
@@ -166,7 +137,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
     const context = useContext(AuthContext);
     if (context === undefined) {
-        // Fallback for SSR or if Provider is missing to prevent crash
         return {
             user: null,
             session: null,

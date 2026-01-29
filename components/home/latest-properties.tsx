@@ -18,8 +18,12 @@ export async function LatestProperties() {
         if (adRes.success && adRes.data) {
             adSettings = adRes.data as AdSettings;
         }
-    } catch (error) {
-        console.error('Error fetching home data:', error);
+    } catch (error: any) {
+        // Silence Auth Noise
+        const msg = error?.message || '';
+        if (!msg.includes('Rate limit') && !msg.includes('Refresh Token')) {
+            console.error('Error fetching home data:', error);
+        }
         featuredProducts = [];
     }
 

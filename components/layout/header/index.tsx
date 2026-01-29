@@ -48,7 +48,7 @@ export function Header({ collections }: HeaderProps) {
       const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
       setIsInstalled(isStandalone);
     }
-  }, [user]);
+  }, [user?.id]);
 
   useEffect(() => {
     const handler = (e: any) => {

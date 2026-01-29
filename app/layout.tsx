@@ -16,6 +16,7 @@ import { getCollections } from '@/lib/api';
 import { WhatsappPopup } from '@/components/layout/whatsapp-popup';
 import { ProvidersWrapper } from '@/components/providers-wrapper';
 import { UserOnboardingManager } from '@/components/auth/user-onboarding-manager';
+import { AuthCleaner } from '@/components/auth/auth-cleaner';
 import { FloatingInstallPrompt } from '@/components/pwa/floating-install-prompt';
 import PWALifecycle from '@/components/pwa/pwa-lifecycle';
 
@@ -163,6 +164,7 @@ export default async function RootLayout({
           }}
         />
         <ProvidersWrapper collections={collections}>
+          <AuthCleaner />
           <PWALifecycle />
           <FloatingInstallPrompt />
           {children}
