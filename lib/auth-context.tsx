@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { supabase } from '@/lib/db';
 import { User, Session } from '@supabase/supabase-js';
 import { useLoader } from '@/context/loader-context';
+import { useDebouncedCallback } from 'use-debounce';
 
 interface UserProfile {
     id: string;
@@ -45,16 +46,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const handleAuthStateChange = useDebouncedCallback(async (event: string, newSession: Session | null) => {
+        if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !newSession)) {
+            // Start fresh
+            setUser(null);
+            setSession(null);
+            setProfile(null);
+        } else if (newSession) {
+            setSession(newSession);
+            setUser(newSession.user ?? null);
+            // Fetch profile if user changed or we don't have it
+            if (newSession.user && (!profile || profile.id !== newSession.user.id)) {
+                fetchProfile(newSession.user.id);
+            }
+        }
+        setIsLoading(false);
+    }, 1000);
+
     useEffect(() => {
         let mounted = true;
 
         const initializeAuth = async () => {
             try {
-                // Get initial session
-                const { data: { session: initialSession }, error } = await supabase.auth.getSession();
+                // Get initial user first (safer than getSession)
+                const { data: { user: authUser }, error } = await supabase.auth.getUser();
 
                 if (error) {
-                    console.error('Error getting session:', error);
+                    console.error('Error getting user:', error);
                     // ... existing error handling ...
                     if (
                         error.code === 'refresh_token_not_found' ||
@@ -71,10 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         setSession(null);
                     }
                 } else if (mounted) {
+                    // If user is valid, get the session
+                    const { data: { session: initialSession } } = await supabase.auth.getSession();
                     setSession(initialSession);
-                    setUser(initialSession?.user ?? null);
-                    if (initialSession?.user) {
-                        fetchProfile(initialSession.user.id);
+                    setUser(authUser ?? null);
+                    if (authUser) {
+                        fetchProfile(authUser.id);
                     }
                 }
             } catch (error) {
@@ -88,28 +108,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         initializeAuth();
 
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
             if (mounted) {
-                if (_event === 'SIGNED_OUT' || (_event === 'TOKEN_REFRESHED' && !newSession)) {
-                    // Start fresh
-                    setUser(null);
-                    setSession(null);
-                    setProfile(null);
-                } else if (newSession) {
-                    setSession(newSession);
-                    setUser(newSession.user ?? null);
-                    // Fetch profile if user changed or we don't have it
-                    if (newSession.user && (!profile || profile.id !== newSession.user.id)) {
-                        fetchProfile(newSession.user.id);
-                    }
-                }
-                setIsLoading(false);
+                handleAuthStateChange(event, session);
             }
         });
 
         return () => {
             mounted = false;
             subscription.unsubscribe();
+            handleAuthStateChange.cancel();
         };
     }, []);
 

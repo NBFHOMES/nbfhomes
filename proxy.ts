@@ -46,7 +46,12 @@ export async function proxy(request: NextRequest) {
             },
           })
           cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+            // Override domain for production to ensure consistency
+            const cookieOptions = {
+              ...options,
+              domain: process.env.NODE_ENV === 'production' ? '.nbfhomes.in' : undefined,
+            };
+            response.cookies.set(name, value, cookieOptions)
           })
         },
       },
