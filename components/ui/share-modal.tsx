@@ -21,7 +21,7 @@ export function ShareModal({ isOpen, onClose, product }: ShareModalProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    setFullUrl(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in'}/product/${product.handle}`);
+    setFullUrl(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app'}/product/${product.handle}`);
   }, [product.handle]);
 
   const handleCopy = async () => {

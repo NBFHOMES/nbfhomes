@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 // Configure Web Push (Must be done server-side)
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
     webpush.setVapidDetails(
-        `mailto:${process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@nbfhomes.in'}`,
+        `mailto:${process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'admin@nbf-x-39dd7c53.vercel.app'}`,
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
         process.env.VAPID_PRIVATE_KEY
     );

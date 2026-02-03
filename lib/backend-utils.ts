@@ -358,7 +358,15 @@ export const verifyAuth = async (headers: Headers) => {
     const { data: { user }, error } = await supabase.auth.getUser(token);
 
     if (error || !user) {
-        console.error('Auth verification failed:', error);
+        const isSilentError =
+            error?.code === 'refresh_token_not_found' ||
+            error?.status === 400 ||
+            error?.status === 429 ||
+            error?.code === 'over_request_rate_limit';
+
+        if (!isSilentError) {
+            console.error('Auth verification failed:', error);
+        }
         throw new Error('Unauthorized: Invalid token');
     }
 
@@ -427,7 +435,10 @@ export const verifyAdmin = async (headers: Headers) => {
         .single();
 
     if (error || !adminCheck) {
-        console.error('Admin verification failed:', error);
+        const isSilentError = error?.code === 'refresh_token_not_found' || (error as any)?.status === 400 || (error as any)?.status === 429;
+        if (!isSilentError) {
+            console.error('Admin verification failed:', error);
+        }
         throw new Error('Unauthorized: Admin access required');
     }
 

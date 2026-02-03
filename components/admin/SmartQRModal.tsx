@@ -135,8 +135,8 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
     const handleManualSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Validation handled in server action too, but let's be nice
-        if (!manualId.trim().startsWith('nbf_')) {
-            toast.error("Invalid Format", { description: "Must start with 'nbf_'" });
+        if (!manualId.trim().includes('_')) {
+            toast.error("Invalid Format", { description: "Must contain an underscore (e.g. NBF_XYZ)" });
             return;
         }
         handleAssign(manualId.trim());
@@ -219,7 +219,7 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
                                         className="w-full p-4 text-center text-lg font-mono font-bold border-2 border-neutral-200 rounded-xl focus:border-black outline-none"
                                         autoFocus
                                     />
-                                    <p className="text-[10px] text-neutral-400 mt-2 text-center">Must start with 'nbf_'</p>
+                                    <p className="text-[10px] text-neutral-400 mt-2 text-center">Must contain underscore (e.g. MDS_123)</p>
                                 </div>
                                 <button
                                     type="submit"

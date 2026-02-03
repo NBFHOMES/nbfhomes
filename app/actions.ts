@@ -14,7 +14,7 @@ const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_RE
     : null;
 
 // Helper to create context-aware Supabase client
-async function getSupabaseClient() {
+export async function getSupabaseClient() {
     const cookieStore = await cookies();
 
     return createServerClient(
@@ -74,7 +74,7 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
             .from("admin_users")
             .select("user_id")
             .eq("user_id", userId)
-            .single();
+            .maybeSingle();
 
         if (error) {
             console.error("CheckAdminStatus DB Error:", error);
@@ -183,7 +183,7 @@ export async function approveProductAction(
         // 4. Trigger Google Indexing (Automation)
         try {
             const { notifyGoogleIndexing } = await import('@/lib/google-indexing');
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app';
             // Assuming handle is available or constructed. 
             // We need to fetch handle if not in hand. properties table has it.
             if (product.handle) { // If fetched above, waiting to verify if 'tags' select included 'handle'
@@ -622,25 +622,52 @@ export async function sendNewPropertyNotificationAction(propertyTitle: string, p
 export async function assignUserQR(adminId: string, targetUserId: string, qrCode: string) {
     if (!adminId || !targetUserId || !qrCode) return { success: false, error: 'Missing Data' };
 
-    // Format Validation
-    if (!qrCode.startsWith('nbf_')) {
-        return { success: false, error: 'Invalid QR Format. Must start with "nbf_"' };
+    // Format Validation - Relaxed to allow custom prefixes (e.g. MDS_)
+    if (!qrCode.includes('_')) {
+        return { success: false, error: 'Invalid QR Format. Must contain an underscore (PREFIX_ID)' };
     }
 
     try {
         const adminStatus = await checkAdminStatus(adminId);
         if (!adminStatus) return { success: false, error: 'Unauthorized' };
 
-        // 1. Assign QR to User (One-to-Many: Users can have multiple QRs)
-        // We no longer update the 'users' table or clear previous assignments.
-        // The 'qr_codes' table is the source of truth for assignment.
+        // Normalize Code: Find the exact casing in DB
+        const { data: exactMatch, error: findError } = await globalSupabase
+            .from('qr_codes')
+            .select('code, status')
+            .ilike('code', qrCode) // Case-insensitive match
+            .single();
 
-        const { error } = await globalSupabase
+        if (findError || !exactMatch) {
+            return { success: false, error: 'QR Code not found in system' };
+        }
+
+        if (exactMatch.status === 'active') {
+            return { success: false, error: 'QR Code is already assigned.' };
+        }
+
+        const exactCode = exactMatch.code;
+
+        // 1. Assign QR to QR Table
+        const { error: qrError } = await globalSupabase
             .from('qr_codes')
             .update({ status: 'active', assigned_user_id: targetUserId })
-            .eq('code', qrCode);
+            .eq('code', exactCode);
 
-        if (error) throw error;
+        if (qrError) throw qrError;
+
+        // 2. Sync to Users Table (For UI Status)
+        // Use AUTHENTICATED client to pass RLS (Admins can update all profiles)
+        const authClient = await getSupabaseClient();
+        const { error: userError } = await authClient
+            .from('users')
+            .update({ assigned_qr_id: exactCode })
+            .eq('id', targetUserId);
+
+        if (userError) {
+            console.error("Failed to sync user table (RLS/Col Error):", userError);
+            return { success: true, warning: 'QR Active but User Status Sync Failed' };
+        }
 
         return { success: true };
     } catch (error: any) {
@@ -682,15 +709,17 @@ export async function getQRCodesAction(page: number = 1, limit: number = 50, fil
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { success: false, error: 'Unauthorized' };
 
-    // Note: We are doing a simplified check here because passing adminId from client might be spoofed, 
-    // but here we get the user from the secure session cookie.
+    // Strict Admin Check
     const isAdmin = await checkAdminStatus(user.id);
     if (!isAdmin) return { success: false, error: 'Unauthorized: Admin access required' };
 
+    // USE SERVICE ROLE CLIENT FOR DATA FETCHING
+    // This ensures that even if RLS policies are messy, the Admin sees the data.
+    // We have already verified the user is an admin above.
     const start = (page - 1) * limit;
     const end = start + limit - 1;
 
-    let query = supabase.from('qr_codes').select('*, assigned_user:users!qr_codes_assigned_user_id_fkey(name, email)', { count: 'exact' });
+    let query = globalSupabase.from('qr_codes').select('*, assigned_user:users!qr_codes_assigned_user_id_fkey(full_name, email)', { count: 'exact' });
 
     if (filter !== 'all') {
         query = query.eq('status', filter);
@@ -710,28 +739,31 @@ export async function markQRDownloadedAction(id: string) {
     return { success: true };
 }
 
-export async function deleteQRCodeAction(qrCodeId: string, adminId: string) {
-    if (!qrCodeId || !adminId) return { success: false, error: 'Missing Data' };
+// DELETE QR Code
+export async function deleteQRCodeAction(id: string, adminId: string) {
+    if (!id || !adminId) return { success: false, error: 'Missing Data' };
 
-    try {
-        const adminStatus = await checkAdminStatus(adminId);
-        if (!adminStatus) return { success: false, error: 'Unauthorized' };
+    const isAdmin = await checkAdminStatus(adminId);
+    if (!isAdmin) return { success: false, error: 'Unauthorized' };
 
-        // Also update users who might be assigned this QR to have null
-        await globalSupabase
-            .from('users')
-            .update({ assigned_qr_id: null })
-            .eq('assigned_qr_id', (await globalSupabase.from('qr_codes').select('code').eq('id', qrCodeId).single()).data?.code);
+    // Use authenticated client
+    const supabase = await getSupabaseClient();
 
-        const { error } = await globalSupabase
-            .from('qr_codes')
-            .delete()
-            .eq('id', qrCodeId);
+    // Safety Check: Don't delete ACTIVE codes
+    const { data: qrcode } = await supabase.from('qr_codes').select('status').eq('id', id).single();
+    if (qrcode && qrcode.status === 'active') {
+        return { success: false, error: 'Cannot delete an ACTIVE QR Code. Unlink user first.' };
+    }
 
-        if (error) throw error;
-        return { success: true };
-    } catch (error: any) {
+    const { error } = await supabase
+        .from('qr_codes')
+        .delete()
+        .eq('id', id);
+
+    if (error) {
         console.error('Delete QR Error:', error);
         return { success: false, error: error.message };
     }
+
+    return { success: true };
 }

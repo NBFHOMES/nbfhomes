@@ -70,11 +70,21 @@ export async function proxy(request: NextRequest) {
 
     // If it's just "Auth session missing", it simply means user is not logged in.
     // We should NOT wipe cookies or log error unless looking for a session specifically.
+    // If it's just "Auth session missing", it simply means user is not logged in.
+    // We should NOT wipe cookies or log error unless looking for a session specifically.
     if (!isSessionMissing) {
       if (error?.code === 'UND_ERR_CONNECT_TIMEOUT') {
         console.warn('Proxy Auth: Supabase Connection Timed Out (Review Network)');
+      } else if (isRefreshError) {
+        // SILENT FAILURE: Do not log "Invalid Refresh Token" to console.
+        console.log('Session Expired - Resetting');
+        // Just proceed to clean cookies below.
+      } else if (error?.status === 429 || error?.code === 'over_request_rate_limit') {
+        // SILENT/QUIET FAILURE: Rate limit reached.
+        // Do not log "Proxy Auth Error" with stack trace.
+        console.warn(`Proxy Auth: Rate limit reached. Backing off.`);
       } else {
-        console.error(`Proxy Auth Error: ${isRefreshError ? 'Invalid Refresh Token (Cleaning Cookies)' : error?.message || 'Unknown'}`);
+        console.error(`Proxy Auth Error: ${error?.message || 'Unknown'}`);
       }
     }
 

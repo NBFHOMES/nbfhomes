@@ -1,0 +1,124 @@
+import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/app/actions';
+import { notFound } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import { MapPin, Phone, Mail, User, Home } from 'lucide-react';
+
+// Revalidate every minute
+export const revalidate = 60;
+
+async function getUserProfile(userId: string) {
+    const supabase = await getSupabaseClient();
+
+    // 1. Get User Details
+    const { data: user, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+    if (error || !user) return null;
+
+    // 2. Get User Properties
+    const { data: properties } = await supabase
+        .from('properties')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'approved') // Only show approved properties
+        .order('created_at', { ascending: false });
+
+    return { user, properties: properties || [] };
+}
+
+export default async function ViewProfilePage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = await params;
+    const profile = await getUserProfile(id);
+
+    if (!profile) {
+        return notFound();
+    }
+
+    const { user, properties } = profile;
+
+    return (
+        <div className="min-h-screen bg-neutral-50 pb-20">
+            {/* Header / Cover */}
+            <div className="bg-black text-white py-12 px-4 shadow-md">
+                <div className="max-w-4xl mx-auto flex flex-col md:flex-row items-center gap-6">
+                    <div className="w-24 h-24 bg-neutral-800 rounded-full flex items-center justify-center text-4xl font-bold uppercase border-4 border-neutral-700">
+                        {user.full_name ? user.full_name[0] : <User />}
+                    </div>
+                    <div className="text-center md:text-left">
+                        <h1 className="text-3xl font-bold">{user.full_name || 'NBF User'}</h1>
+                        <p className="text-neutral-400 mt-1 flex items-center justify-center md:justify-start gap-2">
+                            <Mail className="w-4 h-4" /> {user.email}
+                        </p>
+                        {user.phone && (
+                            <p className="text-neutral-400 mt-1 flex items-center justify-center md:justify-start gap-2">
+                                <Phone className="w-4 h-4" /> {user.phone}
+                            </p>
+                        )}
+                        <div className="mt-4 flex flex-wrap gap-2 justify-center md:justify-start">
+                            <span className="px-3 py-1 bg-neutral-800 rounded-full text-xs font-bold text-green-400 border border-green-900">
+                                Verified Agent
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Properties Grid */}
+            <div className="max-w-4xl mx-auto px-4 mt-8">
+                <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <Home className="w-5 h-5" />
+                    Available Properties ({properties.length})
+                </h2>
+
+                {properties.length === 0 ? (
+                    <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-neutral-300">
+                        <p className="text-neutral-500">No active properties listed.</p>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {properties.map((property: any) => (
+                            <Link href={`/property/${property.handle}`} key={property.id} className="block group">
+                                <div className="bg-white rounded-2xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-md transition-all">
+                                    <div className="h-48 bg-neutral-200 relative">
+                                        {property.featured_image && (
+                                            <Image
+                                                src={property.featured_image?.url || property.featured_image}
+                                                alt={property.title}
+                                                fill
+                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                            />
+                                        )}
+                                        <div className="absolute top-2 right-2 bg-black/70 text-white px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
+                                            ₹ {property.price}
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <h3 className="font-bold text-lg mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">
+                                            {property.title}
+                                        </h3>
+                                        <p className="text-sm text-neutral-500 flex items-center gap-1 mb-2">
+                                            <MapPin className="w-3 h-3" />
+                                            {property.location || property.city || 'Location'}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 mt-3">
+                                            {property.tags && property.tags.slice(0, 3).map((tag: string) => (
+                                                <span key={tag} className="px-2 py-1 bg-neutral-100 rounded text-[10px] font-bold text-neutral-600 uppercase">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}

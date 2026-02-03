@@ -18,7 +18,7 @@ interface QRInventoryItem {
     created_at: string;
     assigned_user_id?: string;
     assigned_user?: {
-        name: string;
+        full_name: string;
         email: string;
     } | null;
 }
@@ -55,13 +55,13 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('POWERED BY NBF', 100, height - 25);
-    ctx.fillText('WWW.NBFHOMES.IN', width - 150, height - 25);
+    ctx.fillText('NBF-X-39DD7C53.VERCEL.APP', width - 150, height - 25);
 
     // Top Branding
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('https://www.nbfhomes.in', 50, 60);
+    ctx.fillText('https://nbf-x-39dd7c53.vercel.app', 50, 60);
 
     // NBF HOMES Button-like Badge
     ctx.fillStyle = '#000000';
@@ -93,7 +93,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     // We use a Promise to wait for image loading
     return new Promise((resolve) => {
         const qrSize = 400; // Large QR
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`https://nbff.in/qr/${code}`)}&margin=10`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`https://nbf-x-39dd7c53.vercel.app/qr/${code}`)}&margin=10`;
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;
@@ -163,7 +163,8 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
             if (res.success) {
                 setQrCodes(res.codes || []);
             } else {
-                toast.error("Failed to load QR codes");
+                toast.error("Failed to load QR codes: " + res.error);
+                console.error("QR Load Error:", res.error);
             }
         } catch (error) {
             console.error(error);
@@ -590,8 +591,8 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                                                         <User className="w-3 h-3 text-blue-600" />
                                                         <span className="text-[10px] font-bold text-blue-800 uppercase">Assigned To</span>
                                                     </div>
-                                                    <p className="text-xs font-bold text-neutral-900 truncate" title={qr.assigned_user.name}>
-                                                        {qr.assigned_user.name || 'Unknown'}
+                                                    <p className="text-xs font-bold text-neutral-900 truncate" title={qr.assigned_user.full_name}>
+                                                        {qr.assigned_user.full_name || 'Unknown'}
                                                     </p>
                                                     <p className="text-[10px] text-neutral-500 truncate" title={qr.assigned_user.email}>
                                                         {qr.assigned_user.email}
@@ -616,7 +617,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
             {/* Smart QR Modal Handles Assignments */}
             <SmartQRModal
                 isOpen={!!selectedUserForQR}
-                onClose={() => { setSelectedUserForQR(null); fetchUsers(); }} // Refresh users on close to show updates
+                onClose={() => { setSelectedUserForQR(null); fetchUsers(); fetchInventory(); }} // Refresh users AND inventory on close
                 user={selectedUserForQR}
                 adminId={adminId}
             />

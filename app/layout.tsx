@@ -18,7 +18,7 @@ import { ProvidersWrapper } from '@/components/providers-wrapper';
 import { UserOnboardingManager } from '@/components/auth/user-onboarding-manager';
 import { FloatingInstallPrompt } from '@/components/pwa/floating-install-prompt';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     description: 'Find verified PGs and rooms in Mandsaur, Neemuch, Ratlam, and Indore with zero brokerage. Connect directly with owners on NBF Homes.',
   },
   alternates: {
-    canonical: 'https://www.nbfhomes.in',
+    canonical: 'https://nbf-x-39dd7c53.vercel.app',
   },
   robots: {
     index: true,

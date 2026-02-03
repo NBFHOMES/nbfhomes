@@ -85,7 +85,7 @@ export function SmartQRManager({ adminId }: { adminId: string }) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Render QR
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(`https://www.nbfhomes.in/qr/${qr.code}`)}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(`https://nbf-x-39dd7c53.vercel.app/qr/${qr.code}`)}`;
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;

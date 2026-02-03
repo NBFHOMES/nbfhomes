@@ -28,14 +28,14 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            // Force Redirection to Home/Dashboard as requested
-            // Using absolute URL to prevent relative path ambiguity
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nbfhomes.in'
-            // For local dev, prioritize localhost if origin is localhost
-            // Ensure we redirect to the live site in production, or localhost only if strictly needed during dev
-            const targetUrl = siteUrl;
+            // Fix: Respect localhost origin for development to avoid redirecting to production
+            const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
+            const targetBase = isLocal ? origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app');
 
-            return NextResponse.redirect(`${targetUrl}${next === '/' ? '' : next}`)
+            // Default to /profile if no specific next path is provided
+            const targetPath = (next === '/' || !next) ? '/profile' : next;
+
+            return NextResponse.redirect(`${targetBase}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`)
         }
     }
 

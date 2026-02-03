@@ -1,4 +1,5 @@
 'use client';
+// rebuild fix
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/db';
@@ -61,14 +62,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                         error.code === 'refresh_token_already_used' ||
                         error.message?.includes('Refresh Token Not Found') ||
                         error.message?.includes('Already Used') ||
-                        error.status === 400 ||
-                        error.status === 429
+                        error.status === 400
                     ) {
-                        // ... existing logout logic ...
+                        // SILENT FAILURE: No console.error for expected auth expirations
+                        console.log('Auth Circuit Breaker Triggered: Clearing Session');
                         await supabase.auth.signOut();
-                        // ...
-                        setUser(null);
-                        setSession(null);
+                        localStorage.clear();
+                        if (typeof window !== 'undefined') {
+                            window.location.reload();
+                        }
+                        return;
+                    }
+
+                    if (error.status === 429 || error.code === 'over_request_rate_limit') {
+                        console.warn('Rate limit reached. Backing off for 5 seconds...');
+                        // Simple 5s delay/backoff mechanism - effectively stops this cycle
+                        await new Promise(resolve => setTimeout(resolve, 5000));
+                        return;
                     }
                 } else if (mounted) {
                     setSession(initialSession);
@@ -89,7 +99,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         initializeAuth();
 
         const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
-            if (mounted) {
+            if (!mounted) return;
+
+            // Debounce the state update to prevent UI flickering and race conditions
+            const handleAuthChange = async () => {
                 if (_event === 'SIGNED_OUT' || (_event === 'TOKEN_REFRESHED' && !newSession)) {
                     // Start fresh
                     setUser(null);
@@ -104,7 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     }
                 }
                 setIsLoading(false);
-            }
+            };
+
+            // Use a small timeout to debounce rapid events
+            setTimeout(handleAuthChange, 3000);
         });
 
         return () => {

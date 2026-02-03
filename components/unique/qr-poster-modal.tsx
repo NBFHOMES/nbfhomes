@@ -42,7 +42,7 @@ export function QRPosterModal({ isOpen, onClose, property, user }: QRPosterModal
 
     if (!isOpen || !property) return null;
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app';
     const finalQrUrl = mode === 'single'
         ? `${siteUrl}/product/${property.handle}`
         : `${siteUrl}/catalog/${property.userId}`;
@@ -93,7 +93,7 @@ export function QRPosterModal({ isOpen, onClose, property, user }: QRPosterModal
     // Watermark
     const watermarkSvg = `
         <svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'>
-            <text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='20' fill='${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}' text-anchor='middle' transform='rotate(-45 100 100)'>nbfhomes.in</text>
+            <text x='50%' y='50%' font-family='sans-serif' font-weight='bold' font-size='20' fill='${isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'}' text-anchor='middle' transform='rotate(-45 100 100)'>nbfhomes.vercel.app</text>
         </svg>
     `.trim().replace(/\s+/g, ' ');
     const watermarkUrl = `url("data:image/svg+xml,${encodeURIComponent(watermarkSvg)}")`;
@@ -159,7 +159,7 @@ export function QRPosterModal({ isOpen, onClose, property, user }: QRPosterModal
                         >
                             {/* Header */}
                             <div className="relative z-10 px-8 py-6 flex items-start justify-between shrink-0">
-                                <div className={`font-bold text-xl tracking-wide ${textClass}`}>https://www.nbfhomes.in</div>
+                                <div className={`font-bold text-xl tracking-wide ${textClass}`}>https://nbf-x-39dd7c53.vercel.app</div>
                                 <div className={`${isDark ? 'bg-amber-400 text-black' : 'bg-black text-white'} px-6 py-2 font-black tracking-widest text-lg uppercase rounded-sm shadow-sm`}>NBF HOMES</div>
                             </div>
 
@@ -229,7 +229,7 @@ export function QRPosterModal({ isOpen, onClose, property, user }: QRPosterModal
                                 {/* Branding Footer (Overlay or distinct) */}
                                 <div className={`shrink-0 h-10 ${isDark ? 'bg-black' : 'bg-neutral-900'} flex items-center justify-between px-6 z-40`}>
                                     <div className="text-neutral-500 font-bold text-[10px] tracking-wider">POWERED BY NBF</div>
-                                    <div className="text-white font-bold text-xs tracking-widest uppercase">WWW.NBFHOMES.IN</div>
+                                    <div className="text-white font-bold text-xs tracking-widest uppercase">NBF-X-39DD7C53.VERCEL.APP</div>
                                 </div>
                             </div>
                         </div>

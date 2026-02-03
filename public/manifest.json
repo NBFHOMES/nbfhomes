@@ -2,7 +2,7 @@
     "name": "NBF Homes",
     "short_name": "NBF",
     "description": "Find your perfect room or PG on India's largest property marketplace.",
-    "start_url": "https://www.nbfhomes.in/",
+    "start_url": "https://nbf-x-39dd7c53.vercel.app/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#000000",
