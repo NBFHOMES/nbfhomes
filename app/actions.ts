@@ -648,21 +648,20 @@ export async function assignUserQR(adminId: string, targetUserId: string, qrCode
 
         const exactCode = exactMatch.code;
 
-        // 1. Assign QR to QR Table
-        const { error: qrError } = await globalSupabase
+        // Execute both updates in parallel for "No Lag" experience
+        const updateQRPromise = globalSupabase
             .from('qr_codes')
             .update({ status: 'active', assigned_user_id: targetUserId })
             .eq('code', exactCode);
 
-        if (qrError) throw qrError;
-
-        // 2. Sync to Users Table (For UI Status)
-        // Use AUTHENTICATED client to pass RLS (Admins can update all profiles)
-        const authClient = await getSupabaseClient();
-        const { error: userError } = await authClient
+        const updateUserPromise = globalSupabase
             .from('users')
             .update({ assigned_qr_id: exactCode })
             .eq('id', targetUserId);
+
+        const [{ error: qrError }, { error: userError }] = await Promise.all([updateQRPromise, updateUserPromise]);
+
+        if (qrError) throw qrError;
 
         if (userError) {
             console.error("Failed to sync user table (RLS/Col Error):", userError);

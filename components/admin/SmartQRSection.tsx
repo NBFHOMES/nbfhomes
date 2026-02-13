@@ -624,13 +624,6 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
         </div>
     );
 }
-interface QRInventoryItem {
-    id: string;
-    code: string;
-    status: 'unused' | 'active' | 'disabled';
-    is_downloaded: boolean;
-    created_at: string;
-    assigned_user_id?: string;
-}
+
 
 
