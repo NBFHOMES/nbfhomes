@@ -76,11 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     ) {
                         // SILENT FAILURE: No console.error for expected auth expirations
                         console.log('Auth Circuit Breaker Triggered: Clearing Session');
-                        await supabase.auth.signOut();
-                        localStorage.clear();
-                        if (typeof window !== 'undefined') {
-                            window.location.reload();
-                        }
+                        // await supabase.auth.signOut(); // Let the autoRefreshToken handle it or expire naturally
+                        // localStorage.clear();
+                        // if (typeof window !== 'undefined') {
+                        //     window.location.reload();
+                        // }
                         return;
                     }
 

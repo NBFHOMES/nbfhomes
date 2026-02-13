@@ -13,13 +13,29 @@ export async function GET(request: Request) {
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
             {
+                cookieOptions: {
+                    name: 'nbf_v5_final',
+                    domain: process.env.NODE_ENV === 'production' ? '.nbfhomes.in' : undefined,
+                    path: '/',
+                    sameSite: 'lax',
+                    secure: process.env.NODE_ENV === 'production',
+                },
                 cookies: {
                     getAll() {
                         return cookieStore.getAll()
                     },
                     setAll(cookiesToSet) {
                         cookiesToSet.forEach(({ name, value, options }) => {
-                            cookieStore.set(name, value, options)
+                            cookieStore.set({
+                                name,
+                                value,
+                                ...options,
+                                // Force domain for production consistency
+                                domain: process.env.NODE_ENV === 'production' ? '.nbfhomes.in' : undefined,
+                                path: '/',
+                                secure: process.env.NODE_ENV === 'production',
+                                sameSite: 'lax',
+                            })
                         })
                     },
                 },
