@@ -27,12 +27,12 @@ export const supabase = typeof window !== 'undefined'
         },
         realtime: {
             params: {
-                eventsPerSecond: 2,
+                eventsPerSecond: 10,
             },
         },
     })
     : createSupabaseClient(supabaseUrl, supabaseAnonKey, {
         auth: {
-            persistSession: false, // Server client shouldn't persist session in memory same way
+            persistSession: false,
         }
     })

@@ -73,7 +73,10 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
         if (scannerRef.current) {
             try {
                 await scannerRef.current.stop();
-            } catch (ignore) { }
+                await scannerRef.current.clear(); // Important: Clear the DOM element
+            } catch (ignore) {
+                console.warn("Failed to stop scanner cleanly:", ignore);
+            }
             scannerRef.current = null;
         }
     };
