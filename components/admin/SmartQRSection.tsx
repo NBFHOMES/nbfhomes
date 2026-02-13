@@ -55,13 +55,13 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'center';
     ctx.fillText('POWERED BY NBF', 100, height - 25);
-    ctx.fillText('NBF-X-39DD7C53.VERCEL.APP', width - 150, height - 25);
+    ctx.fillText('WWW.NBFHOMES.IN', width - 150, height - 25);
 
     // Top Branding
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('https://nbf-x-39dd7c53.vercel.app', 50, 60);
+    ctx.fillText('https://www.nbfhomes.in', 50, 60);
 
     // NBF HOMES Button-like Badge
     ctx.fillStyle = '#000000';
@@ -93,7 +93,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     // We use a Promise to wait for image loading
     return new Promise((resolve) => {
         const qrSize = 400; // Large QR
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`https://nbf-x-39dd7c53.vercel.app/qr/${code}`)}&margin=10`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`https://www.nbfhomes.in/qr/${code}`)}&margin=10`;
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;

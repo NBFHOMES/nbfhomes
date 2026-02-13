@@ -55,6 +55,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const { data: { session: initialSession }, error } = await supabase.auth.getSession();
 
                 if (error) {
+                    // Ignore AuthSessionMissingError - it just means not logged in
+                    if (error.message === 'Auth session missing!' || error.message?.includes('Auth session missing')) {
+                        if (mounted) {
+                            setSession(null);
+                            setUser(null);
+                            setIsLoading(false);
+                        }
+                        return;
+                    }
+
                     console.error('Error getting session:', error);
                     // ... existing error handling ...
                     if (
@@ -134,10 +144,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loginWithGoogle = async () => {
         try {
             showLoader();
+
+            // Robust URL construction
+            // Prioritize window.location.origin to ensure localhost works correctly during dev
+            let siteUrl = window.location.origin;
+
+            // Fallback to env var if window is undefined (SSR - though this function is client-side)
+            if (!siteUrl || siteUrl === 'null') {
+                siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+            }
+
+            // Ensure protocol
+            if (siteUrl && !siteUrl.startsWith('http')) {
+                siteUrl = `https://${siteUrl}`;
+            }
+
+            console.log('Logging in with redirect to:', `${siteUrl}/auth/callback`);
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',
                 options: {
-                    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback`,
+                    redirectTo: `${siteUrl}/auth/callback`,
                 },
             });
             if (error) throw error;

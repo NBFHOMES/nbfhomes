@@ -23,33 +23,6 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
     const scannerRef = useRef<Html5Qrcode | null>(null);
     const scannerRegionId = 'html5qr-code-full-region';
 
-    // Reset when opening for new user
-    useEffect(() => {
-        if (isOpen && user) {
-            setActiveTab('scan');
-            setManualId('');
-            setScanError(null);
-        }
-    }, [isOpen, user]);
-
-    // Handle Scanner Lifecycle
-    useEffect(() => {
-        if (!isOpen || activeTab !== 'scan') {
-            stopScanner();
-            return;
-        }
-
-        // Start Scanner with delay to ensure DOM is ready
-        const timer = setTimeout(() => {
-            startScanner();
-        }, 300);
-
-        return () => {
-            clearTimeout(timer);
-            stopScanner();
-        };
-    }, [isOpen, activeTab]);
-
     const startScanner = async () => {
         if (scannerRef.current) return; // Already running
 
@@ -104,6 +77,33 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
             scannerRef.current = null;
         }
     };
+
+    // Reset when opening for new user
+    useEffect(() => {
+        if (isOpen && user) {
+            setActiveTab('scan');
+            setManualId('');
+            setScanError(null);
+        }
+    }, [isOpen, user]);
+
+    // Handle Scanner Lifecycle
+    useEffect(() => {
+        if (!isOpen || activeTab !== 'scan') {
+            stopScanner();
+            return;
+        }
+
+        // Start Scanner with delay to ensure DOM is ready
+        const timer = setTimeout(() => {
+            startScanner();
+        }, 300);
+
+        return () => {
+            clearTimeout(timer);
+            stopScanner();
+        };
+    }, [isOpen, activeTab]);
 
     const handleScanSuccess = (qrCode: string) => {
         stopScanner();

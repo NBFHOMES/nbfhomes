@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { User, Mail, Phone, Briefcase, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -37,6 +37,9 @@ export default function UserInfoModal({ isOpen, onClose, user }: UserInfoModalPr
                         <Info className="w-5 h-5 text-neutral-500" />
                         User Details
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        Detailed information selected user
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
@@ -48,8 +51,8 @@ export default function UserInfoModal({ isOpen, onClose, user }: UserInfoModalPr
                         <div>
                             <h3 className="text-lg font-medium text-neutral-900">{user.name}</h3>
                             <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${user.status === 'banned'
-                                    ? 'bg-red-100 text-red-800 border-red-200'
-                                    : 'bg-green-100 text-green-800 border-green-200'
+                                ? 'bg-red-100 text-red-800 border-red-200'
+                                : 'bg-green-100 text-green-800 border-green-200'
                                 }`}>
                                 {user.status === 'banned' ? 'Banned' : 'Active'}
                             </span>

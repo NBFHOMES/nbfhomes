@@ -85,7 +85,7 @@ export function SmartQRManager({ adminId }: { adminId: string }) {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         // Render QR
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(`https://nbf-x-39dd7c53.vercel.app/qr/${qr.code}`)}`;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(`https://www.nbfhomes.in/qr/${qr.code}`)}`;
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;
@@ -202,7 +202,7 @@ export function SmartQRManager({ adminId }: { adminId: string }) {
 
                             <div className="flex justify-center mb-3">
                                 <img
-                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://nbf-x-39dd7c53.vercel.app/qr/${qr.code}`)}`}
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=100x100&data=${encodeURIComponent(`https://www.nbfhomes.in/qr/${qr.code}`)}`}
                                     alt="QR"
                                     className="w-24 h-24 opacity-90 group-hover:opacity-100 transition-opacity mix-blend-multiply"
                                 />

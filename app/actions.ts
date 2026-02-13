@@ -183,7 +183,7 @@ export async function approveProductAction(
         // 4. Trigger Google Indexing (Automation)
         try {
             const { notifyGoogleIndexing } = await import('@/lib/google-indexing');
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app';
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
             // Assuming handle is available or constructed. 
             // We need to fetch handle if not in hand. properties table has it.
             if (product.handle) { // If fetched above, waiting to verify if 'tags' select included 'handle'

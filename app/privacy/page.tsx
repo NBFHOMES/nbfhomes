@@ -43,7 +43,7 @@ export default function PrivacyPage() {
 
                         <h3>5. Contact Us</h3>
                         <p>
-                            If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@nbf-x-39dd7c53.vercel.app">privacy@nbf-x-39dd7c53.vercel.app</a>.
+                            If you have any questions about this Privacy Policy, please contact us at <a href="mailto:privacy@nbfhomes.in">privacy@nbfhomes.in</a>.
                         </p>
                     </div>
                 </div>

@@ -10,7 +10,7 @@ export default function TermsPage() {
 
                     <div className="prose prose-neutral max-w-none">
                         <p>
-                            Welcome to NBF Homes. By accessing our website (nbf-x-39dd7c53.vercel.app), you agree to follow these terms and conditions.
+                            Welcome to NBF Homes. By accessing our website (www.nbfhomes.in), you agree to follow these terms and conditions.
                         </p>
 
                         <h3>1. Nature of Service</h3>
@@ -44,7 +44,7 @@ export default function TermsPage() {
 
                         <h3>6. Contact Us</h3>
                         <p>
-                            For any questions regarding these Terms, please contact us at <a href="mailto:support@nbf-x-39dd7c53.vercel.app">support@nbf-x-39dd7c53.vercel.app</a>.
+                            For any questions regarding these Terms, please contact us at <a href="mailto:support@nbfhomes.in">support@nbfhomes.in</a>.
                         </p>
                     </div>
                 </div>

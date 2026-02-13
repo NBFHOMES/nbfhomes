@@ -30,7 +30,7 @@ export async function GET(request: Request) {
         if (!error) {
             // Fix: Respect localhost origin for development to avoid redirecting to production
             const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
-            const targetBase = isLocal ? origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app');
+            const targetBase = isLocal ? origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
 
             // Default to /profile if no specific next path is provided
             const targetPath = (next === '/' || !next) ? '/profile' : next;

@@ -1,4 +1,5 @@
 import { getCollectionProducts, getCollections, getProducts, getCollection } from '@/lib/api';
+import Link from 'next/link';
 import type { Product, ProductCollectionSortKey, ProductSortKey } from '@/lib/types';
 import { ProductListContent } from './product-list-content';
 import { mapSortKeys } from '@/lib/utils';
@@ -98,12 +99,12 @@ export default async function ProductList({ collection, searchParams }: ProductL
           <p className="text-neutral-500 text-sm max-w-xs mx-auto mb-6">
             Try adjusting your price range or filters to see more results.
           </p>
-          <a
+          <Link
             href="/properties"
             className="inline-flex items-center justify-center px-6 py-2.5 bg-neutral-900 text-white font-bold rounded-xl text-sm transition-transform active:scale-95 shadow-md hover:bg-neutral-800"
           >
             Clear All Filters
-          </a>
+          </Link>
         </div>
       )}
     </div>

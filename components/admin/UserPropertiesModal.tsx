@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Product } from "@/lib/types";
 import { getOptimizedImageUrl } from "@/lib/cloudinary-utils";
 import { Badge } from "@/components/ui/badge";
@@ -39,6 +39,9 @@ export function UserPropertiesModal({
                             </Badge>
                         </div>
                     </DialogTitle>
+                    <DialogDescription className="sr-only">
+                        List of properties owned by {userName}
+                    </DialogDescription>
                 </DialogHeader>
 
                 <ScrollArea className="flex-1 mt-4 pr-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Check, Copy, Share2, MessageCircle, MoreHorizontal } from 'lucide-react';
@@ -21,7 +21,7 @@ export function ShareModal({ isOpen, onClose, product }: ShareModalProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    setFullUrl(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://nbf-x-39dd7c53.vercel.app'}/product/${product.handle}`);
+    setFullUrl(`${process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in'}/product/${product.handle}`);
   }, [product.handle]);
 
   const handleCopy = async () => {
@@ -122,9 +122,9 @@ export function ShareModal({ isOpen, onClose, product }: ShareModalProps) {
               <Share2 className="w-7 h-7 text-blue-600" />
             </div>
             <DialogTitle className="text-xl font-serif font-semibold text-neutral-900">Share Property</DialogTitle>
-            <p className="text-sm text-neutral-500 max-w-[260px]">
+            <DialogDescription className="text-sm text-neutral-500 max-w-[260px]">
               Share this property details with your friends and family
-            </p>
+            </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">

@@ -1,7 +1,7 @@
 'use client';
 // Google Login Modal Refactored
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/auth-context';
 
@@ -26,6 +26,9 @@ export function LoginModal({ isOpen, onClose }: LoginModalProps) {
                         <DialogTitle className="text-4xl font-serif font-medium text-neutral-900 tracking-tight">
                             Welcome back
                         </DialogTitle>
+                        <DialogDescription className="sr-only">
+                            Sign in options
+                        </DialogDescription>
                         <p className="text-base text-neutral-500 max-w-[280px] leading-relaxed">
                             Sign in with Google to manage your properties and messages.
                         </p>
