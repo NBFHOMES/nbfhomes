@@ -11,12 +11,17 @@ import './globals.css';
 import { Collection } from '@/lib/types';
 import { getCollections } from '@/lib/api';
 
-import { Suspense } from 'react'; // Add Suspense
-import { LoadingBarWrapper } from '@/components/loading-bar-wrapper';
-import { WhatsappPopup } from '@/components/layout/whatsapp-popup';
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+
 import { ProvidersWrapper } from '@/components/providers-wrapper';
-import { UserOnboardingManager } from '@/components/auth/user-onboarding-manager';
-import { FloatingInstallPrompt } from '@/components/pwa/floating-install-prompt';
+
+// 🚀 LAZY LOADING: Dynamically import heavy UI wrappers and popups
+const LoadingBarWrapper = dynamic(() => import('@/components/loading-bar-wrapper').then(mod => mod.LoadingBarWrapper));
+const WhatsappPopup = dynamic(() => import('@/components/layout/whatsapp-popup').then(mod => mod.WhatsappPopup));
+const UserOnboardingManager = dynamic(() => import('@/components/auth/user-onboarding-manager').then(mod => mod.UserOnboardingManager));
+const FloatingInstallPrompt = dynamic(() => import('@/components/pwa/floating-install-prompt').then(mod => mod.FloatingInstallPrompt));
+const OfflineDetector = dynamic(() => import('@/components/pwa/offline-detector').then(mod => mod.OfflineDetector));
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
 
@@ -146,6 +151,7 @@ export default async function RootLayout({
         <ProvidersWrapper collections={collections}>
           <LoadingBarWrapper />
           <FloatingInstallPrompt />
+          <OfflineDetector />
           {children}
           <UserOnboardingManager />
           <WhatsappPopup />

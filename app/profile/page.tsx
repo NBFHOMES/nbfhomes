@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download } from 'lucide-react';
+import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download, EyeOff, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { getUserProducts, deleteProduct, updateProduct } from '@/lib/api';
@@ -19,6 +19,7 @@ export default function ProfilePage() {
     const [editingProperty, setEditingProperty] = useState<Product | null>(null);
     const [qrPosterProperty, setQrPosterProperty] = useState<Product | null>(null); // New State
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+    const [togglingPropertyId, setTogglingPropertyId] = useState<string | null>(null);
 
     const [isMounted, setIsMounted] = useState(false);
 
@@ -141,6 +142,38 @@ export default function ProfilePage() {
         } catch (error: any) {
             console.error('Error deleting property:', error);
             toast.error(error.message || 'Failed to delete property');
+        }
+    };
+
+    const handleToggleStatus = async (property: Product) => {
+        setTogglingPropertyId(property.id);
+        const newIsActive = !(property.availableForSale && property.status === 'approved');
+        
+        try {
+            const { error: updateError } = await supabase
+                .from('properties')
+                .update({
+                    available_for_sale: newIsActive,
+                    status: newIsActive ? 'approved' : 'inactive',
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', property.id);
+
+            if (!updateError) {
+                setProperties(properties.map(p => 
+                    p.id === property.id 
+                        ? { ...p, availableForSale: newIsActive, status: newIsActive ? 'approved' : 'inactive' } 
+                        : p
+                ));
+                toast.success(newIsActive ? 'Property is now Active and visible' : 'Property is now marked as Rented (Inactive)');
+            } else {
+                console.error("Supabase update error:", updateError);
+                toast.error(updateError.message || 'Failed to update property status');
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to update property status');
+        } finally {
+            setTogglingPropertyId(null);
         }
     };
 
@@ -294,6 +327,21 @@ export default function ProfilePage() {
                                                             className="h-full w-full object-cover object-center"
                                                         />
                                                     )}
+                                                    <div className="absolute top-2 left-2 z-10">
+                                                        {property.status === 'pending' ? (
+                                                            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm bg-orange-500 text-white">
+                                                                Pending Approval
+                                                            </span>
+                                                        ) : property.status === 'rejected' ? (
+                                                            <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm bg-red-600 text-white">
+                                                                Rejected
+                                                            </span>
+                                                        ) : (
+                                                            <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm ${property.availableForSale && property.status === 'approved' ? 'bg-green-500 text-white' : 'bg-neutral-600 text-white'}`}>
+                                                                {property.availableForSale && property.status === 'approved' ? 'Active' : 'Rented'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2 hidden sm:block">
                                                         <span className="text-white text-xs font-bold">
                                                             ₹{Number(property.price || property.priceRange?.minVariantPrice?.amount || 0).toLocaleString('en-IN')}
@@ -321,13 +369,42 @@ export default function ProfilePage() {
                                                     </div>
 
                                                     {/* Actions */}
-                                                    <div className="mt-2 flex gap-2 relative z-10 w-full">
+                                                    <div className="mt-2 flex flex-wrap sm:flex-nowrap gap-1.5 relative z-10 w-full">
+                                                        {/* Toggle Active/Rented Button (Hidden if Pending or Rejected) */}
+                                                        {property.status !== 'pending' && property.status !== 'rejected' && (
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.preventDefault();
+                                                                    handleToggleStatus(property);
+                                                                }}
+                                                                disabled={togglingPropertyId === property.id}
+                                                                className={`flex-1 min-w-[30%] flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase rounded transition-colors ${
+                                                                    property.availableForSale && property.status === 'approved' 
+                                                                    ? 'text-amber-700 bg-amber-50 hover:bg-amber-100' 
+                                                                    : 'text-green-700 bg-green-50 hover:bg-green-100'
+                                                                }`}
+                                                            >
+                                                                {togglingPropertyId === property.id ? (
+                                                                    <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
+                                                                ) : (property.availableForSale && property.status === 'approved') ? (
+                                                                    <>
+                                                                        <EyeOff className="w-3 h-3" />
+                                                                        Rented
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Eye className="w-3 h-3" />
+                                                                        Active
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={(e) => {
                                                                 e.preventDefault();
                                                                 router.push(`/post-property?edit=${property.id}`);
                                                             }}
-                                                            className="flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase text-blue-700 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                                                            className="flex-1 min-w-[20%] flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase text-blue-700 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
                                                         >
                                                             <Edit className="w-3 h-3" />
                                                             Edit
@@ -337,7 +414,7 @@ export default function ProfilePage() {
                                                                 e.preventDefault();
                                                                 setQrPosterProperty(property);
                                                             }}
-                                                            className="flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase text-purple-700 bg-purple-50 hover:bg-purple-100 rounded transition-colors"
+                                                            className="flex-1 min-w-[25%] flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase text-purple-700 bg-purple-50 hover:bg-purple-100 rounded transition-colors"
                                                         >
                                                             <Download className="w-3 h-3" />
                                                             Poster
@@ -347,7 +424,7 @@ export default function ProfilePage() {
                                                                 e.preventDefault();
                                                                 setDeleteConfirm(property.id);
                                                             }}
-                                                            className="flex items-center justify-center px-2 py-1.5 text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors"
+                                                            className="px-2 py-1.5 flex items-center justify-center text-red-700 bg-red-50 hover:bg-red-100 rounded transition-colors"
                                                         >
                                                             <Trash2 className="w-3 h-3" />
                                                         </button>

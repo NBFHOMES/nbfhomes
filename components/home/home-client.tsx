@@ -22,8 +22,16 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
     const { profile, isLoading } = useAuth();
     const [filteredProducts, setFilteredProducts] = useState(initialProducts);
 
-    // Force reload to clear stuck service worker cache
+    const router = require('next/navigation').useRouter();
+
+    // 1. Sync updated server props to local state if server re-renders (Router Refresh)
     useEffect(() => {
+        setFilteredProducts(initialProducts);
+    }, [initialProducts]);
+
+    // 2. Real-time Supabase Data Sync (Instant PWA Updates)
+    useEffect(() => {
+        // Force reload to clear stuck service worker cache (First Load only)
         if (typeof window !== 'undefined') {
             const hasReloaded = sessionStorage.getItem('nbf_home_fix_v1');
             if (!hasReloaded) {
@@ -31,7 +39,25 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 window.location.reload();
             }
         }
-    }, []);
+
+        // Keep page synchronized globally across all PWA and web sessions!
+        const { createClient } = require('@supabase/supabase-js');
+        const supabase = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+        );
+
+        const channel = supabase.channel('home_properties_sync')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, () => {
+                console.log('[Real-time] Global property update detected. Refreshing UI seamlessly...');
+                router.refresh(); 
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [router]);
 
     const handleSearch = useCallback((query: string) => {
         if (!query.trim()) {
@@ -54,9 +80,8 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
         setFilteredProducts(filtered);
     }, [initialProducts]);
 
-    if (isLoading) {
-        return <div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div></div>;
-    }
+    // Removed blocking isLoading check so that SSR HTML paints immediately!
+    // Banned check will still gracefully take over once auth resolves in the background.
 
     if (profile?.status === 'banned') {
         return <BannedView />;

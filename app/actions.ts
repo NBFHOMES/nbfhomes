@@ -4,6 +4,7 @@ import { Redis } from '@upstash/redis';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
 
 // Initialize Redis client
 const redis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -21,6 +22,9 @@ export async function getSupabaseClient() {
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
         {
+            cookieOptions: {
+                name: 'nbf_v5_final',
+            },
             cookies: {
                 get(name: string) {
                     return cookieStore.get(name)?.value;
@@ -49,27 +53,24 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const globalSupabase = createSupabaseClient(supabaseUrl, supabaseServiceKey || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
 
-export async function checkAdminStatus(userId: string): Promise<boolean> {
-    // SERVER-SIDE SECURITY CHECK
-    if (!userId) return false;
-
-    const cacheKey = `auth:admin:${userId}`;
-
-    // 1. Check Redis Cache (Bypassed for debugging)
-    // if (redis) {
-    //     try {
-    //         const cachedStatus = await redis.get(cacheKey);
-    //         if (cachedStatus !== null) {
-    //             return Boolean(cachedStatus);
-    //         }
-    //     } catch (error) {
-    //         console.warn('Redis cache error:', error);
-    //     }
-    // }
-
-    // 2. Check Supabase Database
+export async function checkAdminStatus(legacyUserId?: string): Promise<boolean> {
     try {
-        // Use global client for checking admin status (public table)
+        // CRITICAL SECURITY FIX: Trust only the server-side session, not client inputs
+        const supabase = await getSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+        
+        if (authError || !user) {
+            console.warn("CheckAdminStatus: No valid active session found");
+            return false;
+        }
+
+        const userId = user.id;
+        const cacheKey = `auth:admin:${userId}`;
+
+        // 1. Check Redis Cache (Bypassed for debugging)
+        // if (redis) { ... }
+
+        // 2. Check Supabase Database securely using actual user ID
         const { data, error } = await globalSupabase
             .from("admin_users")
             .select("user_id")
@@ -84,7 +85,7 @@ export async function checkAdminStatus(userId: string): Promise<boolean> {
         if (!isAdmin) console.log("CheckAdminStatus: Not found in admin_users table");
 
         // 3. Cache the result
-        if (redis) {
+        if (redis && isAdmin) {
             try {
                 await redis.set(cacheKey, isAdmin, { ex: 300 });
             } catch (error) {
@@ -131,10 +132,57 @@ export async function updateProductStatusAction(
             return { success: false, error: error.message };
         }
 
+        revalidatePath('/', 'layout');
+
         return { success: true };
     } catch (error: any) {
         console.error('Error in updateProductStatusAction:', error);
         return { success: false, error: error.message || 'Unknown error' };
+    }
+}
+
+// Property Form Reporting Action
+export async function submitPropertyReportAction(
+    propertyId: string,
+    propertyTitle: string,
+    ownerName: string,
+    reporterData: { name: string; phone: string },
+    reason: string,
+    details: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = await getSupabaseClient();
+        
+        const subject = `[FLAGGED PROPERTY] ${propertyTitle} (ID: ${propertyId})`;
+        const messageBody = `
+⚠️ PROPERTY REPORT ⚠️
+Reason: ${reason}
+Target Owner: ${ownerName}
+
+Details from User:
+${details || 'No additional details provided.'}
+        `.trim();
+
+        // Use the existing inquiries table which the admin panel already monitors
+        const { error } = await supabase.from('inquiries').insert({
+            first_name: reporterData.name,
+            last_name: '',
+            email: `report-${propertyId}@nbfhomes.in`, // Differentiating placeholder
+            phone_number: reporterData.phone,
+            subject: subject,
+            message: messageBody,
+            status: 'new' // Triggers Admin badge
+        });
+
+        if (error) {
+            console.error('Error submitting property report:', error);
+            return { success: false, error: 'Database error occurred while submitting report.' };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Action error in submitPropertyReportAction:', error);
+        return { success: false, error: 'Unexpected error occurred.' };
     }
 }
 
@@ -199,6 +247,8 @@ export async function approveProductAction(
             console.warn('Indexing trigger failed (Non-critical):', idxError);
         }
 
+        revalidatePath('/', 'layout');
+
         return { success: true };
     } catch (error: any) {
         console.error('Error in approveProductAction:', error);
@@ -231,6 +281,8 @@ export async function rejectProductAction(
         if (error) {
             return { success: false, error: error.message };
         }
+
+        revalidatePath('/', 'layout');
 
         return { success: true };
     } catch (error: any) {
@@ -315,6 +367,7 @@ export async function adminDeleteProductAction(
         }
 
         console.log('[Zero-Residual] Property and related data deleted successfully.');
+        revalidatePath('/', 'layout');
         return { success: true };
     } catch (error: any) {
         console.error('Error in adminDeleteProductAction:', error);
@@ -765,4 +818,55 @@ export async function deleteQRCodeAction(id: string, adminId: string) {
     }
 
     return { success: true };
+}
+
+// User action to toggle their own property status (Active/Inactive)
+export async function togglePropertyStatusUserAction(
+    propertyId: string,
+    isActive: boolean
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = await getSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return { success: false, error: 'Unauthorized: User not logged in' };
+        }
+
+        // Verify ownership
+        const { data: property, error: fetchError } = await supabase
+            .from('properties')
+            .select('user_id')
+            .eq('id', propertyId)
+            .single();
+
+        if (fetchError || !property) {
+            return { success: false, error: 'Property not found' };
+        }
+
+        if (property.user_id !== user.id) {
+            return { success: false, error: 'Unauthorized: You do not own this property' };
+        }
+
+        const newStatus = isActive ? 'approved' : 'inactive';
+
+        const { error: updateError } = await supabase
+            .from('properties')
+            .update({
+                available_for_sale: isActive,
+                status: newStatus,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', propertyId);
+
+        if (updateError) {
+            console.error('Error updating property status:', updateError);
+            return { success: false, error: updateError.message };
+        }
+
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error in togglePropertyStatusUserAction:', error);
+        return { success: false, error: error.message || 'Unknown error' };
+    }
 }

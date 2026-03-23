@@ -35,62 +35,58 @@ export function PropertyLoader() {
                     className="fixed inset-0 z-[9999] flex items-center justify-center bg-white/60 backdrop-blur-md"
                 >
                     <div className="relative flex flex-col items-center justify-center">
-                        {/* House Icon with Pulse */}
-                        <motion.div
-                            animate={{
-                                scale: [1, 1.1, 1],
-                            }}
-                            transition={{
-                                duration: 1.5,
-                                repeat: Infinity,
-                                ease: "easeInOut"
-                            }}
-                            className="z-10 text-red-600 mb-8"
-                        >
-                            <Home size={48} strokeWidth={1.5} />
-                        </motion.div>
-
-                        {/* Rotating Progress Circle */}
-                        <div className="absolute inset-0 flex items-center justify-center -top-8">
-                            <svg className="w-32 h-32 transform -rotate-90">
+                        
+                        {/* Main Loader Container */}
+                        <div className="relative flex flex-col items-center justify-center w-36 h-36">
+                            
+                            {/* Rotating Progress Circle */}
+                            <svg className="absolute inset-0 w-full h-full transform -rotate-90 drop-shadow-sm">
                                 <circle
-                                    cx="64"
-                                    cy="64"
-                                    r="56"
+                                    cx="72"
+                                    cy="72"
+                                    r="64"
                                     stroke="currentColor"
-                                    strokeWidth="2"
+                                    strokeWidth="3"
                                     fill="transparent"
-                                    className="text-neutral-200"
+                                    className="text-neutral-100"
                                 />
                                 <motion.circle
-                                    cx="64"
-                                    cy="64"
-                                    r="56"
+                                    cx="72"
+                                    cy="72"
+                                    r="64"
                                     stroke="currentColor"
-                                    strokeWidth="2"
+                                    strokeWidth="3"
                                     fill="transparent"
-                                    className="text-red-600"
-                                    strokeDasharray="351.86" // 2 * pi * 56
-                                    strokeDashoffset={351.86 - (351.86 * progress) / 100}
+                                    className="text-red-500"
+                                    strokeDasharray="402.12" // 2 * pi * 64
+                                    strokeDashoffset={402.12 - (402.12 * progress) / 100}
                                     strokeLinecap="round"
                                 />
                             </svg>
-                        </div>
 
-                        {/* Percentage Text */}
-                        <div className="absolute flex items-center justify-center top-[30px]">
-                            <span className="text-xs font-bold text-neutral-400 font-mono">{progress}%</span>
+                            {/* Inner Content (Icon + Percentage) perfectly centered */}
+                            <div className="flex flex-col items-center justify-center z-10 w-full">
+                                <motion.div
+                                    animate={{ scale: [1, 1.08, 1] }}
+                                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                    className="text-red-500 mb-1"
+                                >
+                                    <Home size={32} strokeWidth={1.5} />
+                                </motion.div>
+                                <span className="text-sm font-bold text-neutral-800 font-mono tracking-wider">
+                                    {progress}%
+                                </span>
+                            </div>
                         </div>
-
 
                         {/* Optional Text */}
                         <motion.p
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 5 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 }}
-                            className="mt-8 text-sm font-medium text-neutral-600 tracking-wide"
+                            transition={{ delay: 0.1 }}
+                            className="mt-6 text-xs font-semibold text-neutral-500 tracking-[0.2em] uppercase"
                         >
-                            PROCESSING
+                            Loading
                         </motion.p>
                     </div>
                 </motion.div>

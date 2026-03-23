@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import Link from 'next/link';
 import { ContactOwner } from '@/components/products/contact-owner';
+import { ReportPropertyModal } from '@/components/products/report-property-modal';
 import { storeCatalog } from '@/lib/constants';
 import Prose from '@/components/prose';
 import { formatPrice } from '@/lib/utils';
@@ -165,6 +166,20 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
   const addressQuery = encodeURIComponent(addressString || `${product.tags?.[2] || ''}, ${product.tags?.[1] || ''}`);
   const mapEmbedUrl = `https://maps.google.com/maps?q=${addressQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
   const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
+
+  const rawDescription = product.descriptionHtml || product.description || '';
+  let mainDescription = rawDescription;
+  let seoSection = '';
+
+  if (rawDescription.includes('--- About Property & Area ---')) {
+    const parts = rawDescription.split('--- About Property & Area ---');
+    mainDescription = parts[0].trim();
+    seoSection = parts[1].trim();
+  } else if (rawDescription.includes('--- Search Keywords ---')) {
+    const parts = rawDescription.split('--- Search Keywords ---');
+    mainDescription = parts[0].trim();
+    seoSection = parts[1].trim();
+  }
 
   return (
     // Added padding bottom for mobile sticky footer space
@@ -371,7 +386,7 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
             <div className="bg-white p-4 md:p-8 rounded-2xl border border-neutral-200 shadow-sm overflow-hidden my-6">
               <h2 className="text-xl font-bold text-neutral-900 mb-4">About Property</h2>
               <div className="prose prose-neutral prose-sm max-w-none text-neutral-600 break-words whitespace-pre-wrap [overflow-wrap:anywhere]">
-                <Prose html={product.descriptionHtml || product.description} />
+                <Prose html={mainDescription} />
               </div>
             </div>
 
@@ -463,6 +478,16 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
               </p>
             </div>
 
+            {/* SEO Context (Auto-Generated Tags) - Rendered at the bottom for Google Bot mostly */}
+            {seoSection && (
+              <div className="bg-white p-6 md:p-8 rounded-2xl border border-neutral-200 shadow-sm mt-6 mb-6">
+                <h2 className="text-xl font-bold text-neutral-900 mb-4">Property & Neighborhood Overview</h2>
+                <div className="text-sm text-neutral-600 leading-relaxed whitespace-pre-wrap">
+                  {seoSection}
+                </div>
+              </div>
+            )}
+
           </div>
 
           {/* RIGHT COLUMN: Sidebar (Desktop Sticky) */}
@@ -530,14 +555,8 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
                   No Booking Fees. Directly contact the owner and visit the property for free.
                 </p>
 
-                <div className="mt-6 pt-6 border-t border-neutral-100 text-center">
-                  <Link
-                    href={`/contact?propertyId=${product.id}&handle=${encodeURIComponent(product.handle)}`}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-neutral-400 hover:text-red-600 transition-colors"
-                  >
-                    <AlertTriangle className="w-4 h-4" />
-                    Report this Property
-                  </Link>
+                <div className="mt-6 pt-6 border-t border-neutral-100 text-center flex justify-center">
+                  <ReportPropertyModal product={product} />
                 </div>
               </div>
             </div>

@@ -46,7 +46,7 @@ export async function Footer() {
           </div>
 
           {/* Links Columns */}
-          <div className="md:col-span-8 grid grid-cols-2 lg:grid-cols-5 gap-8">
+          <div className="md:col-span-8 grid grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Shop */}
             <div className="flex flex-col gap-6">
               <h4 className="font-serif text-lg font-medium">Properties</h4>
@@ -68,8 +68,8 @@ export async function Footer() {
               <h4 className="font-serif text-lg font-medium">Company</h4>
               <ul className="flex flex-col gap-4 text-neutral-400">
                 <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href="/connect" className="hover:text-white transition-colors">Connect & Socials</Link></li>
                 <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-
                 <li><Link href="/sustainability" className="hover:text-white transition-colors">Sustainability</Link></li>
               </ul>
             </div>
@@ -79,7 +79,7 @@ export async function Footer() {
               <h4 className="font-serif text-lg font-medium">Support</h4>
               <ul className="flex flex-col gap-4 text-neutral-400">
                 <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-                <li><Link href="/faq" className="hover:text-white transition-colors">FAQs</Link></li>
+                <li><Link href="/faqs" className="hover:text-white transition-colors">FAQs</Link></li>
                 <li><Link href="/safety" className="hover:text-white transition-colors">Safety Tips</Link></li>
                 <li><Link href="/help" className="hover:text-white transition-colors">Help Center</Link></li>
               </ul>
@@ -95,22 +95,6 @@ export async function Footer() {
               </ul>
             </div>
 
-            {/* SEO Targets / Nearby Locations */}
-            <div className="flex flex-col gap-6">
-              <h4 className="font-serif text-lg font-medium">Nearby Locations</h4>
-              <ul className="flex flex-col gap-4 text-neutral-400 text-sm">
-                {/* Primary */}
-                <li><Link href="/properties?search=Mandsaur" className="hover:text-white transition-colors">PG in Mandsaur</Link></li>
-                <li><Link href="/properties?search=Neemuch" className="hover:text-white transition-colors">Rooms in Neemuch</Link></li>
-                <li><Link href="/properties?search=Ratlam" className="hover:text-white transition-colors">Flats in Ratlam</Link></li>
-                <li><Link href="/properties?search=Jaora" className="hover:text-white transition-colors">Rentals in Jaora</Link></li>
-                <li><Link href="/properties?search=Pratapgarh" className="hover:text-white transition-colors">Pratapgarh Housing</Link></li>
-                {/* Secondary (Hidden on Mobile/Tablet if needed, strictly visible for SEO) */}
-                <li><Link href="/properties?search=Indore" className="hover:text-white transition-colors">Indore</Link></li>
-                <li><Link href="/properties?search=Ujjain" className="hover:text-white transition-colors">Ujjain</Link></li>
-                <li><Link href="/properties?search=Kota" className="hover:text-white transition-colors">Kota</Link></li>
-              </ul>
-            </div>
           </div>
         </div>
 

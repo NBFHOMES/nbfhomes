@@ -191,9 +191,6 @@ export default function SearchPage() {
                                 <span className="text-xs font-bold text-neutral-500">✕</span>
                             </button>
                         )}
-                        {!query && (
-                            <Mic className="w-5 h-5 text-blue-500 absolute right-3.5 top-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform" />
-                        )}
                     </form>
                 </div>
 

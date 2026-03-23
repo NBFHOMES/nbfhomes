@@ -130,7 +130,8 @@ export async function middleware(request: NextRequest) {
     const isProtectedRoute =
         request.nextUrl.pathname.startsWith('/dashboard') ||
         request.nextUrl.pathname.startsWith('/admin') ||
-        request.nextUrl.pathname.startsWith('/sell')
+        request.nextUrl.pathname.startsWith('/sell') ||
+        request.nextUrl.pathname.startsWith('/profile')
 
     // Redirects
     if (!user && isProtectedRoute) {

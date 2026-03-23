@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import { Trash2, Eye, Users, User, Building, TrendingUp, ChevronLeft, ChevronRight, Search, Filter, CheckCircle, XCircle, Download, Info, MessageSquare, MessageCircle, Ban, X } from 'lucide-react';
+import { Trash2, Eye, Users, User, Building, TrendingUp, ChevronLeft, ChevronRight, Search, Filter, CheckCircle, XCircle, Download, Info, MessageSquare, MessageCircle, Ban, X, LayoutDashboard, Building2, CheckSquare, AlertTriangle, Megaphone, Settings, Menu } from 'lucide-react';
 import { useLoader } from '@/context/loader-context';
 import Image from 'next/image';
 // ... imports
@@ -133,6 +133,9 @@ export default function AdminPage() {
     // Support Requests State
     const [supportRequests, setSupportRequests] = useState<any[]>([]);
     const [selectedAppeal, setSelectedAppeal] = useState<any | null>(null);
+
+    // Mobile Sidebar State
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     // New Filter States
     const [cityFilter, setCityFilter] = useState('');
@@ -719,17 +722,81 @@ export default function AdminPage() {
             hideLoader();
         }
     };
+    
+    const navItems = [
+        { id: 'overview', label: 'Overview', icon: LayoutDashboard, action: () => { setActiveTab('overview'); fetchStats(); } },
+        { id: 'properties', label: 'Properties', icon: Building2, action: () => { setActiveTab('properties'); fetchProducts(1); } },
+        { id: 'users', label: 'Users', icon: Users, action: () => { setActiveTab('users'); fetchUsers(1); } },
+        { id: 'approvals', label: 'Approvals', icon: CheckSquare, action: () => { setActiveTab('approvals'); fetchApprovals(1); } },
+        { id: 'inquiries', label: 'Inquiries', icon: MessageSquare, action: () => { setActiveTab('inquiries'); fetchInquiries(1); }, badge: unreadInquiries },
+        { id: 'appeals', label: 'Appeals', icon: AlertTriangle, action: () => { setActiveTab('appeals'); fetchSupportRequests(1); } },
+        { id: 'ads', label: 'Manage Ads', icon: Megaphone, action: () => { setActiveTab('ads'); } },
+        { id: 'smart-qr', label: 'Smart QR', icon: QrCode, action: () => { setActiveTab('smart-qr'); } },
+        { id: 'settings', label: 'Settings', icon: Settings, action: () => { setActiveTab('settings'); fetchSettings(); } },
+    ];
 
     return (
-        <div className="min-h-screen bg-neutral-50 flex">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white border-r hidden md:block fixed h-full z-10 overflow-y-auto">
-                <div className="p-6 border-b">
-                    <h1 className="text-xl font-serif font-bold text-neutral-900">NBF Admin</h1>
+        <div className="min-h-screen bg-neutral-50/50 flex flex-col md:flex-row pt-14 md:pt-0">
+            
+            {/* Mobile Header (Sticky Top underneath global navbar) */}
+            <div className="md:hidden sticky top-14 left-0 right-0 h-14 bg-white border-b border-neutral-200 z-30 flex items-center justify-between px-4 shadow-sm w-full">
+                <h1 className="text-lg font-serif font-bold text-neutral-900 tracking-tight">Admin Menu</h1>
+                <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="p-1.5 -mr-1.5 text-neutral-600 hover:bg-neutral-100 rounded-lg flex items-center gap-1.5 text-sm font-medium">
+                    {isMobileMenuOpen ? <X className="w-5 h-5" /> : <><Menu className="w-5 h-5" /> Menu</>}
+                </button>
+            </div>
 
+            {/* Backdrop for Mobile Sidebar */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="md:hidden fixed inset-0 bg-black/50 z-30 backdrop-blur-sm" 
+                    onClick={() => setIsMobileMenuOpen(false)} 
+                />
+            )}
+
+            {/* Sidebar (Desktop Persistent, Mobile Drawer) */}
+            <aside className={`
+                fixed md:sticky top-0 left-0 h-screen z-40 bg-white border-r border-neutral-200 w-64 md:w-64 transform transition-transform duration-300 ease-in-out flex flex-col
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+            `}>
+                <div className="h-16 md:h-20 flex items-center px-6 border-b border-neutral-100 shrink-0">
+                    <h1 className="text-2xl font-serif font-bold text-neutral-900 tracking-tight">NBF Admin</h1>
+                </div>
+                <div className="flex-1 overflow-y-auto py-6 px-3 space-y-1 scrollbar-hide">
+                    {navItems.map((item) => {
+                        const Icon = item.icon;
+                        const isActive = activeTab === item.id;
+                        return (
+                            <button
+                                key={item.id}
+                                onClick={() => { item.action(); setIsMobileMenuOpen(false); }}
+                                className={`
+                                    w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all group
+                                    ${isActive ? 'bg-neutral-900 text-white shadow-md shadow-neutral-900/10' : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'}
+                                `}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-neutral-400 group-hover:text-neutral-600'} transition-colors`} />
+                                    {item.label}
+                                </div>
+                                {item.badge && item.badge > 0 && (
+                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isActive ? 'bg-neutral-800 text-white' : 'bg-red-100 text-red-600 group-hover:bg-red-200'}`}>
+                                        {item.badge}
+                                    </span>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+                <div className="p-4 border-t border-neutral-100 mt-auto">
+                     <p className="text-xs text-neutral-400 text-center">NBF Homes Admin v5.0</p>
                 </div>
             </aside>
-            <main className="flex-1 ml-0 md:ml-64 p-8 overflow-y-auto w-full">
+
+            {/* Main Content Area */}
+            <main className="flex-1 w-full flex flex-col min-w-0 max-w-full relative">
+                
+                {/* Modals */}
                 {qrPosterProperty && (
                     <QRPosterModal
                         isOpen={!!qrPosterProperty}
@@ -738,7 +805,6 @@ export default function AdminPage() {
                         user={user}
                     />
                 )}
-
                 <UserPropertiesModal
                     isOpen={!!selectedUserForProperties}
                     onClose={() => { setSelectedUserForProperties(null); setUserProperties([]); }}
@@ -772,32 +838,15 @@ export default function AdminPage() {
                     inquiry={selectedAppeal}
                 />
 
-                {/* Header */}
-                <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-neutral-900">Admin Dashboard</h1>
-                        <p className="text-neutral-600 mt-1">Manage platform activity</p>
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
-                        <button onClick={() => { setActiveTab('overview'); fetchStats(); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'overview' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Overview</button>
-                        <button onClick={() => { setActiveTab('properties'); fetchProducts(1); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'properties' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Properties</button>
-                        <button onClick={() => { setActiveTab('users'); fetchUsers(1); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'users' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Users</button>
-                        <button onClick={() => { setActiveTab('approvals'); fetchApprovals(1); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'approvals' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Approvals</button>
-                        <button onClick={() => { setActiveTab('inquiries'); fetchInquiries(1); }} className={`relative px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'inquiries' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>
-                            Inquiries
-                            {unreadInquiries > 0 && (
-                                <span className={`absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white`}>
-                                    {unreadInquiries}
-                                </span>
-                            )}
-                        </button>
-                        <button onClick={() => { setActiveTab('appeals'); fetchSupportRequests(1); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'appeals' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Appeals</button>
-                        <button onClick={() => { setActiveTab('ads'); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'ads' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Manage Ads</button>
-                        <button onClick={() => { setActiveTab('settings'); fetchSettings(); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'settings' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Settings</button>
-                        <button onClick={() => { setActiveTab('smart-qr'); }} className={`px-3 py-2 sm:px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'smart-qr' ? 'bg-neutral-900 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-100'}`}>Smart QR Management</button>
-                    </div>
-                </div>
+                {/* Content Container */}
+                <div className="p-4 sm:p-8 max-w-[1400px] w-full mx-auto space-y-6">
 
+                    {/* Dynamic Header based on Active Tab */}
+                    <div className="mb-6">
+                        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-neutral-900 border-b border-neutral-200 pb-4">
+                            {navItems.find(item => item.id === activeTab)?.label || 'Dashboard'}
+                        </h1>
+                    </div>
 
                 {
                     activeTab === 'overview' && (
@@ -1445,6 +1494,113 @@ export default function AdminPage() {
                     )}
 
                 {
+                    activeTab === 'inquiries' && (
+                        <div className="space-y-6">
+                            <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
+                                <div className="px-6 py-4 border-b border-neutral-200 flex justify-between items-center bg-white">
+                                    <h2 className="text-lg font-semibold text-neutral-900">User Inquiries & Reports</h2>
+                                    <div className="flex gap-4">
+                                        <button onClick={handleExportInquiries} className="px-4 py-2 bg-neutral-100 text-sm font-medium rounded-lg hover:bg-neutral-200 transition-colors flex items-center gap-2">
+                                            <Download className="w-4 h-4"/> Export CSV
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                {loading ? (
+                                    <div className="p-12 flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div></div>
+                                ) : (
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full">
+                                            <thead className="bg-neutral-50">
+                                                <tr>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Date</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">User</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Subject & Flag</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                                                    <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="bg-white divide-y divide-neutral-200">
+                                                {inquiries.length > 0 ? inquiries.map((inq: any) => (
+                                                    <tr key={inq.id} className={`hover:bg-neutral-50 ${inq.status === 'new' ? 'bg-red-50/20' : ''}`}>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                                                            {new Date(inq.created_at).toLocaleString()}
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap">
+                                                            <div className="text-sm font-bold text-neutral-900">{inq.first_name || 'Guest User'} <span className="font-medium">{inq.last_name || ''}</span></div>
+                                                            <div className="text-xs text-neutral-500 font-mono mt-1 w-fit px-1.5 py-0.5 rounded bg-neutral-100">{inq.phone_number || inq.email}</div>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-normal text-sm text-neutral-900 max-w-sm">
+                                                            {inq.subject?.includes('[FLAGGED PROPERTY]') ? (
+                                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold bg-red-100 text-red-700 border border-red-200 mb-1">
+                                                                    <AlertTriangle className="w-3.5 h-3.5"/> PROPERTY REPORT
+                                                                </span>
+                                                            ) : (
+                                                                <span className="font-bold text-neutral-800 block mb-1">{inq.subject || 'General Inquiry'}</span>
+                                                            )}
+                                                            <p className="mt-1 text-xs text-neutral-600 line-clamp-2 leading-relaxed bg-neutral-50 p-2 border border-neutral-100 rounded-md">
+                                                                {inq.message}
+                                                            </p>
+                                                        </td>
+                                                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                            <span className={`inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${inq.status === 'new' ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-green-100 text-green-700 border border-green-200'}`}>
+                                                                {inq.status}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right whitespace-nowrap text-sm font-medium">
+                                                            <button 
+                                                                onClick={() => setSelectedInquiry(inq)}
+                                                                className="text-neutral-700 hover:text-black bg-white border border-neutral-300 shadow-sm px-4 py-2 rounded-lg text-xs font-bold hover:bg-neutral-50 transition-all focus:ring-2 focus:ring-neutral-900 outline-none"
+                                                            >
+                                                                Review Details
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                )) : (
+                                                    <tr>
+                                                        <td colSpan={5} className="px-6 py-12 text-center text-neutral-500 flex flex-col items-center gap-2">
+                                                            <CheckCircle className="w-8 h-8 text-neutral-300" />
+                                                            <p className="font-medium text-sm">No pending reports or inquiries found.</p>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                        
+                                        {/* Pagination Controls */}
+                                        <div className="px-6 py-4 border-t border-neutral-200 flex items-center justify-between">
+                                            <button
+                                                onClick={() => handlePageChange(currentPage - 1)}
+                                                disabled={currentPage === 1}
+                                                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${currentPage === 1
+                                                    ? 'text-neutral-400 bg-neutral-100 cursor-not-allowed'
+                                                    : 'text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50'
+                                                    }`}
+                                            >
+                                                <ChevronLeft className="w-4 h-4 mr-2" />
+                                                Previous
+                                            </button>
+                                            <span className="text-sm text-neutral-700 font-medium">Page {currentPage} of {totalPages}</span>
+                                            <button
+                                                onClick={() => handlePageChange(currentPage + 1)}
+                                                disabled={currentPage === totalPages}
+                                                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md ${currentPage === totalPages
+                                                    ? 'text-neutral-400 bg-neutral-100 cursor-not-allowed'
+                                                    : 'text-neutral-700 bg-white border border-neutral-300 hover:bg-neutral-50'
+                                                    }`}
+                                            >
+                                                Next
+                                                <ChevronRight className="w-4 h-4 ml-2" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )
+                }
+
+                {
                     activeTab === 'appeals' && (
                         <div className="space-y-6">
                             <div className="bg-white rounded-xl shadow-sm border border-neutral-200 overflow-hidden">
@@ -1605,6 +1761,7 @@ export default function AdminPage() {
                         </div>
                     </div>
                 )}
+                </div> {/* End Content Container */}
             </main>
         </div>
     );

@@ -3,15 +3,15 @@
 import dynamic from 'next/dynamic';
 import { Suspense } from 'react';
 
-// Use SmartProgressBar instead of blocking GlobalLoader
-const SmartProgressBar = dynamic(() => import('@/components/ui/smart-progress-bar').then(mod => mod.SmartProgressBar), {
+// Restore the original LoadingBar as requested
+const LoadingBar = dynamic(() => import('@/components/ui/loading-bar').then(mod => mod.LoadingBar), {
     ssr: false,
 });
 
 export function LoadingBarWrapper() {
     return (
         <Suspense fallback={null}>
-            <SmartProgressBar />
+            <LoadingBar />
         </Suspense>
     );
 }

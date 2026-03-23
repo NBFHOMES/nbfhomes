@@ -167,7 +167,7 @@ function PostPropertyContent() {
 
                 setFormData({
                     title: property.title,
-                    description: property.description,
+                    description: property.description ? property.description.split('\n\n--- About Property')[0].trim() : '',
                     type: property.tags?.[0] || 'PG',
                     address: property.address || property.tags?.[2] || '',
                     location: property.location || location,
@@ -231,6 +231,27 @@ function PostPropertyContent() {
             }
         });
     };
+
+    // Auto-Generated SEO Tags based on User Input
+    const generatedSeoTags = useMemo(() => {
+        if (!formData.city) return [];
+        const city = formData.city;
+        const address = formData.address || formData.locality || 'prime location';
+        const type = formData.type || 'Property';
+
+        return [
+            `Best ${type.toLowerCase()} for rent in ${city}`,
+            `Affordable ${type.toLowerCase()} in ${address}, ${city}`,
+            `${city} mein sasta kiraye ka makan`,
+            `Top rated ${type.toLowerCase()} near me in ${city}`,
+            `Rooms for rent in ${city} without broker`,
+            `Fully furnished ${type.toLowerCase()} in ${city}`,
+            `Cheap rental properties in ${address}`,
+            `Best Hostels and PGs in ${city}`,
+            `Direct owner ${type.toLowerCase()} in ${city} rent`,
+            `Budget friendly stays in ${city}`
+        ];
+    }, [formData.city, formData.address, formData.locality, formData.type]);
 
     const handleCitySelect = (city: string) => {
         setFormData(prev => ({ ...prev, city: city, location: city }));
@@ -398,8 +419,14 @@ function PostPropertyContent() {
         showLoader();
 
         try {
+            let finalDescription = formData.description;
+            if (generatedSeoTags.length > 0) {
+                finalDescription += `\n\n--- About Property & Area ---\nFind the best and most affordable ${formData.type} for rent in ${formData.city}. Located near ${formData.address || formData.locality}, this property offers great amenities for tenants. Explore more top-rated stays locally without brokerage.\n\nSearch Tags: ${generatedSeoTags.join(', ')}`;
+            }
+
             const payload = {
                 ...formData,
+                description: finalDescription,
                 userId: user?.id
             };
 
@@ -891,6 +918,23 @@ function PostPropertyContent() {
                                     placeholder="Describe the property, nearby landmarks, and rules..."
                                     className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none resize-none"
                                 />
+                                {generatedSeoTags.length > 0 && (
+                                    <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200 animate-in fade-in duration-300">
+                                        <p className="text-[10px] font-bold text-green-800 uppercase mb-2 flex items-center gap-1">
+                                            <Zap className="w-3 h-3 text-green-600" /> Auto-Generated SEO Keywords
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {generatedSeoTags.map((tag, idx) => (
+                                                <span key={idx} className="bg-white px-2 py-1 text-xs text-green-700 font-medium border border-green-200 rounded-md shadow-sm select-none">
+                                                    {tag}
+                                                </span>
+                                            ))}
+                                        </div>
+                                        <p className="text-[10px] text-green-600 mt-2 font-medium">
+                                            ये कीवर्ड्स आपकी प्रॉपर्टी के साथ अपने आप जुड़ जाएंगे ताकि Google Search में आपकी लिस्टिंग सबसे ऊपर आ सके।
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

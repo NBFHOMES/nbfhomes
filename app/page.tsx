@@ -12,14 +12,16 @@ export default async function Home() {
   let adSettings: AdSettings | null = null;
 
   try {
-    // Limit to 12 products for better performance
-    const allProducts = await getProducts({ limit: 12 });
-    featuredProducts = allProducts;
+    // 🚀 PARALLEL DATA FETCHING: Fetch products and ad settings simultaneously to cut server time in half
+    const [productsResult, adResult] = await Promise.all([
+      getProducts({ limit: 12 }),
+      getAdSettingsAction()
+    ]);
 
-    // Fetch Ad Settings
-    const adRes = await getAdSettingsAction();
-    if (adRes.success && adRes.data) {
-      adSettings = adRes.data as AdSettings;
+    featuredProducts = productsResult;
+
+    if (adResult.success && adResult.data) {
+      adSettings = adResult.data as AdSettings;
     }
   } catch (error) {
     console.error('Error fetching home data:', error);

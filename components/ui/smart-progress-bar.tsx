@@ -32,15 +32,31 @@ export function SmartProgressBar() {
         }, 500);
     };
 
-    // 1. Handle Route Changes
+    // 1. Handle Route Changes and Click Interceptions
     useEffect(() => {
-        // On route change, start and then quickly complete
-        const startTimer = startAnimation();
+        // Complete the animation that was started on click, since pathname finally updated
         const finishTimer = setTimeout(() => completeAnimation(), 500);
 
+        const handleAnchorClick = (e: MouseEvent) => {
+            if (e.defaultPrevented) return;
+            const target = e.target as HTMLElement;
+            const anchor = target.closest('a');
+
+            if (anchor && anchor.href && !anchor.target && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey) {
+                const url = new URL(anchor.href);
+                // Check if it's an internal link and not just a hash change
+                if (url.origin === window.location.origin && url.pathname !== window.location.pathname) {
+                    startAnimation();
+                }
+            }
+        };
+
+        // Attach global click listener to catch all Link clicks before Next.js navigation starts
+        document.addEventListener('click', handleAnchorClick);
+
         return () => {
-            clearTimeout(startTimer);
             clearTimeout(finishTimer);
+            document.removeEventListener('click', handleAnchorClick);
         };
     }, [pathname, searchParams]);
 
