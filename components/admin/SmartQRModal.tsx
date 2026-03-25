@@ -83,8 +83,12 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
                 setScanError("Permission Denied: Please enable camera access in your browser settings.");
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                 setScanError("Hardware Error: No camera detected on this device.");
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                setScanError("Camera Error: Camera is already in use by another application.");
+            } else if (err.name === 'SecurityError') {
+                setScanError("Security Error: Camera access is blocked by security policy.");
             } else {
-                setScanError("Camera Error: " + (err.message || "Unable to start camera"));
+                setScanError(`Camera Error (${err.name || 'Unknown'}): ${err.message || "Unable to start camera"}`);
             }
         }
     };

@@ -686,11 +686,17 @@ export async function assignUserQR(adminId: string, targetUserId: string, qrCode
         const adminStatus = await checkAdminStatus();
         if (!adminStatus) return { success: false, error: 'Unauthorized' };
 
+        // If the scanned data is a full URL (e.g. https://.../qr/NBF_123), extract just the code
+        let codeToSearch = qrCode;
+        if (qrCode.includes('/qr/')) {
+            codeToSearch = qrCode.split('/qr/').pop() || qrCode;
+        }
+
         // Find QR code (case-insensitive)
         const { data: exactMatch, error: findError } = await supabase
             .from('qr_codes')
             .select('id, code, status')
-            .ilike('code', qrCode)
+            .ilike('code', codeToSearch)
             .maybeSingle();
 
         if (findError) {
