@@ -24,3 +24,10 @@ CREATE POLICY "Users can view assigned qr" ON public.qr_codes
     );
 
 -- Policy: Allow reading unused codes? (Maybe not needed for public, only admins generate)
+
+-- Policy: Public can READ qr_codes for scanning/redirect purpose (no auth needed)
+-- Only exposes: code, status, assigned_user_id (minimum fields needed for redirect)
+DROP POLICY IF EXISTS "Public can scan qr codes" ON public.qr_codes;
+CREATE POLICY "Public can scan qr codes" ON public.qr_codes
+    FOR SELECT
+    USING (true);

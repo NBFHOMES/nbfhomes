@@ -61,7 +61,8 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText('https://www.nbfhomes.in', 50, 60);
+    const siteDisplay = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+    ctx.fillText(siteDisplay, 50, 60);
 
     // NBF HOMES Button-like Badge
     ctx.fillStyle = '#000000';
@@ -93,7 +94,8 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     // We use a Promise to wait for image loading
     return new Promise((resolve) => {
         const qrSize = 400; // Large QR
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`https://www.nbfhomes.in/qr/${code}`)}&margin=10`;
+        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10`;
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;

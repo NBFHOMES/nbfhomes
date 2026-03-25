@@ -3,7 +3,7 @@ import { getSupabaseClient } from '@/app/actions';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { MapPin, Phone, Mail, User, Home } from 'lucide-react';
+import { MapPin, Phone, Mail, User, Home, ArrowRight } from 'lucide-react';
 
 // Revalidate every minute
 export const revalidate = 60;
@@ -51,9 +51,7 @@ export default async function ViewProfilePage({ params }: { params: Promise<{ id
                     </div>
                     <div className="text-center md:text-left">
                         <h1 className="text-3xl font-bold">{user.full_name || 'NBF User'}</h1>
-                        <p className="text-neutral-400 mt-1 flex items-center justify-center md:justify-start gap-2">
-                            <Mail className="w-4 h-4" /> {user.email}
-                        </p>
+                        {/* Email removed for privacy as requested */}
                         {user.phone && (
                             <p className="text-neutral-400 mt-1 flex items-center justify-center md:justify-start gap-2">
                                 <Phone className="w-4 h-4" /> {user.phone}
@@ -82,7 +80,7 @@ export default async function ViewProfilePage({ params }: { params: Promise<{ id
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {properties.map((property: any) => (
-                            <Link href={`/property/${property.handle}`} key={property.id} className="block group">
+                            <Link href={`/product/${property.handle}`} key={property.id} className="block group">
                                 <div className="bg-white rounded-2xl overflow-hidden border border-neutral-200 shadow-sm hover:shadow-md transition-all">
                                     <div className="h-48 bg-neutral-200 relative">
                                         {property.featured_image && (
@@ -119,6 +117,22 @@ export default async function ViewProfilePage({ params }: { params: Promise<{ id
                     </div>
                 )}
             </div>
+
+            {/* Sticky/Fixed Footer Button: NBF HOMES PROPERTY FORM VISIT */}
+            <div className="bg-white border-t border-neutral-200 fixed bottom-0 left-0 right-0 p-4 z-20 md:static md:bg-transparent md:border-t-0 md:p-8 md:mt-8">
+                <div className="max-w-4xl mx-auto">
+                    <Link
+                        href="/properties"
+                        className="flex items-center justify-center w-full gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-black text-lg py-5 rounded-2xl shadow-xl shadow-blue-600/30 hover:shadow-blue-600/40 active:scale-[0.98] transition-all transform"
+                    >
+                        <span>Explore All Properties on NBF HOMES</span>
+                        <ArrowRight className="w-6 h-6" />
+                    </Link>
+                </div>
+            </div>
+
+            {/* Mobile Spacer */}
+            <div className="h-24 md:hidden" />
         </div>
     );
 }
