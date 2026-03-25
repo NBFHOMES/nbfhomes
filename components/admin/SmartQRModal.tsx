@@ -24,47 +24,67 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
     const scannerRegionId = 'html5qr-code-full-region';
 
     const startScanner = async () => {
-        if (scannerRef.current) return; // Already running
+        if (scannerRef.current) return;
 
-        // Double check element exists
+        // Ensure we are in a secure context (HTTPS)
+        if (!window.isSecureContext) {
+            setScanError("Security Error: Camera access requires a secure (HTTPS) connection.");
+            return;
+        }
+
         const element = document.getElementById(scannerRegionId);
         if (!element) {
-            console.warn("Scanner element not found yet, retrying...");
-            setTimeout(startScanner, 100);
+            setTimeout(startScanner, 200);
             return;
         }
 
         try {
-            const scanner = new Html5Qrcode(scannerRegionId);
+            const scanner = new Html5Qrcode(scannerRegionId, {
+                formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+                verbose: false
+            });
             scannerRef.current = scanner;
 
-            await scanner.start(
-                { facingMode: "environment" },
-                {
-                    fps: 10,
-                    qrbox: { width: 250, height: 250 },
-                    aspectRatio: 1.0
-                },
-                (decodedText) => {
-                    handleScanSuccess(decodedText);
-                },
-                (errorMessage) => {
-                    // Ignore frame scan errors
-                }
-            );
-        } catch (err: any) {
-            console.warn("Camera start failed (handled by UI):", err);
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
 
-            // Only show error if scanning was actively requested (not just cleanup)
+            // Attempt 1: Back Camera (Environment)
+            try {
+                await scanner.start(
+                    { facingMode: "environment" },
+                    config,
+                    handleScanSuccess,
+                    () => { } // Error on frame-by-frame is ignored
+                );
+            } catch (envError) {
+                console.warn("Back camera failed, trying fallback...", envError);
+                
+                // Attempt 2: Try any available camera
+                const cameras = await Html5Qrcode.getCameras();
+                if (cameras && cameras.length > 0) {
+                    // Filter for back cameras if possible, otherwise use the first one
+                    const backCamera = cameras.find(c => c.label.toLowerCase().includes('back') || c.label.toLowerCase().includes('rear'));
+                    const cameraId = backCamera ? backCamera.id : cameras[0].id;
+                    
+                    await scanner.start(cameraId, config, handleScanSuccess, () => { });
+                } else {
+                    throw envError; // No cameras found or permission denied
+                }
+            }
+        } catch (err: any) {
+            console.error("Scanner error:", err);
+
             if (activeTab !== 'scan') return;
 
-            if (err.name === 'NotAllowedError' || err.message?.includes('Permission denied')) {
-                setScanError("Permission Denied: Please allow camera access in your browser settings.");
-            } else if (err.message?.includes('HTML Element')) {
-                // Silent retry for DOM race conditions
-                setTimeout(startScanner, 200);
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message?.includes('Permission denied')) {
+                setScanError("Permission Denied: Please enable camera access in your browser settings.");
+            } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+                setScanError("Hardware Error: No camera detected on this device.");
             } else {
-                setScanError("Camera Error: " + (err.message || "Unknown error"));
+                setScanError("Camera Error: " + (err.message || "Unable to start camera"));
             }
         }
     };
