@@ -3,9 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { ReviewModal } from '@/components/modals/ReviewModal';
 import { useAuth } from '@/lib/auth-context';
+import { supabase } from '@/lib/db';
+import { toast } from 'sonner';
+import { getReviewsAction } from '@/app/actions';
 
 interface ReviewContextType {
     trackPropertyContact: (propertyId: string) => void;
+    openManualReview: () => void;
+    hasReviewed: boolean;
 }
 
 const ReviewContext = createContext<ReviewContextType | undefined>(undefined);
@@ -30,6 +35,40 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
         if (dismissed) setDismissedAt(parseInt(dismissed));
         if (retryClicks) setClicksSinceDismissal(parseInt(retryClicks));
     }, []);
+
+    useEffect(() => {
+        const checkDBReview = async () => {
+            if (user) {
+                // We reuse getReviewsAction but we need a way to check for a specific user.
+                // Actually, I should create a specific action for this, 
+                // but I can check if any review in the current list belongs to the user or just fetch specifically.
+                const { data: dbReviews, error } = await supabase
+                    .from('reviews')
+                    .select('id, status')
+                    .eq('user_id', user.id)
+                    .maybeSingle();
+                
+                if (dbReviews && !error) {
+                    setHasReviewed(true);
+                    localStorage.setItem('nbf_has_reviewed', 'true');
+                    
+                    // If blocked, we should probably handle it here too
+                    if (dbReviews.status === 'blocked') {
+                        localStorage.setItem('nbf_user_blocked_reviews', 'true');
+                    }
+                } else if (!error) {
+                    // If no review found in DB, and localStorage says they have, maybe they deleted it?
+                    // We should respect the DB as the source of truth.
+                    // But wait, if they are Guest, localStorage is all we have.
+                    // If logged in, DB is king.
+                    setHasReviewed(false);
+                    localStorage.removeItem('nbf_has_reviewed');
+                }
+            }
+        };
+
+        checkDBReview();
+    }, [user]);
 
     const trackPropertyContact = (propertyId: string) => {
         if (!user || hasReviewed || isModalOpen) return;
@@ -89,8 +128,16 @@ export function ReviewProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('nbf_has_reviewed', 'true');
     };
 
+    const openManualReview = () => {
+        if (hasReviewed) {
+            toast.info("आप पहले ही अपनी समीक्षा दे चुके हैं। धन्यवाद!");
+            return;
+        }
+        setIsModalOpen(true);
+    };
+
     return (
-        <ReviewContext.Provider value={{ trackPropertyContact }}>
+        <ReviewContext.Provider value={{ trackPropertyContact, openManualReview, hasReviewed }}>
             {children}
             <ReviewModal 
                 isOpen={isModalOpen} 

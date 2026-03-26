@@ -2,13 +2,14 @@ import { Metadata } from 'next';
 import { getReviewsAction } from '@/app/actions';
 import { Star, Quote, User } from 'lucide-react';
 import Image from 'next/image';
+import { AddReviewButton } from '@/components/reviews/AddReviewButton';
 
 export const metadata: Metadata = {
-    title: 'Verified Reviews & Happy Users | NBF Homes',
-    description: 'Read what people say about NBF Homes. Discover how users are finding their perfect homes and PG without brokerage in Mandsaur and nearby cities.',
+    title: 'सत्यापित समीक्षाएँ और खुश उपयोगकर्ता | NBF Homes',
+    description: 'NBF होम्स के बारे में लोग क्या कहते हैं, यहाँ पढ़ें। जानें कि कैसे उपयोगकर्ता मंदसौर और आस-पास के sheharon में बिना ब्रोकरेज के अपने लिए सही घर और PG ढूँढ रहे हैं।',
     openGraph: {
-        title: 'Verified Reviews & Happy Users | NBF Homes',
-        description: 'Discover verified reviews from happy NBF Homes users. Zero brokerage, genuine listings, and direct owner contacts.',
+        title: 'सत्यापित समीक्षाएँ और खुश उपयोगकर्ता | NBF Homes',
+        description: 'खुश NBF होम्स उपयोगकर्ताओं की सत्यापित समीक्षाएँ यहाँ देखें। ज़ीरो ब्रोकरेज, असली listings और सीधे मकान मालिक से संपर्क।',
     }
 };
 
@@ -25,7 +26,7 @@ export default async function ReviewsPage() {
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Product',
-        name: 'NBF Homes Property Search',
+        name: 'NBF होम्स प्रॉपर्टी सर्च',
         aggregateRating: {
             '@type': 'AggregateRating',
             ratingValue: avgRating,
@@ -33,7 +34,7 @@ export default async function ReviewsPage() {
         },
         review: reviews.map((r: any) => ({
             '@type': 'Review',
-            author: { '@type': 'Person', name: r.user?.full_name || 'Verified User' },
+            author: { '@type': 'Person', name: r.user?.full_name || 'सत्यापित उपयोगकर्ता' },
             reviewRating: { '@type': 'Rating', ratingValue: r.rating },
             reviewBody: r.content,
             datePublished: r.created_at
@@ -51,8 +52,9 @@ export default async function ReviewsPage() {
             {/* Header */}
             <div className="bg-white border-b border-neutral-100 py-20 px-4 text-center">
                 <div className="max-w-3xl mx-auto">
-                    <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-4">Verified Community Reviews</h1>
-                    <p className="text-lg text-neutral-500">Discover why thousands of people trust NBF Homes for their housing needs.</p>
+                    <h1 className="text-4xl md:text-5xl font-bold text-neutral-900 mb-4">सत्यापित सामुदायिक समीक्षाएँ</h1>
+                    <p className="text-lg text-neutral-500">जानें कि क्यों हज़ारों लोग अपनी आवासीय ज़रूरतों के लिए NBF होम्स पर भरोसा करते हैं।</p>
+                    <AddReviewButton />
                 </div>
             </div>
 
@@ -64,17 +66,17 @@ export default async function ReviewsPage() {
                         <div className="flex justify-center my-1 text-yellow-400">
                             {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-5 h-5 fill-current" />)}
                         </div>
-                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">Average Rating</p>
+                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">औसत रेटिंग</p>
                     </div>
                     <div className="h-12 w-[1px] bg-neutral-100 hidden md:block" />
                     <div className="text-center">
                         <p className="text-4xl font-bold text-neutral-900">{reviews.length}+</p>
-                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">Total Reviews</p>
+                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">कुल समीक्षाएँ</p>
                     </div>
                     <div className="h-12 w-[1px] bg-neutral-100 hidden md:block" />
                     <div className="text-center">
                         <p className="text-4xl font-bold text-neutral-900">100%</p>
-                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">Brokerage Free</p>
+                        <p className="text-xs text-neutral-400 uppercase font-bold tracking-widest mt-1">बिना ब्रोकरेज के</p>
                     </div>
                 </div>
             </div>
@@ -83,7 +85,7 @@ export default async function ReviewsPage() {
             <div className="max-w-7xl mx-auto px-4 py-20">
                 {reviews.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-neutral-200">
-                        <p className="text-neutral-400 font-medium text-lg">Be the first to share your experience!</p>
+                        <p className="text-neutral-400 font-medium text-lg">अपना अनुभव साझा करने वाले पहले व्यक्ति बनें!</p>
                     </div>
                 ) : (
                     <div className="columns-1 md:columns-2 lg:columns-3 gap-6 space-y-6">
@@ -115,10 +117,26 @@ export default async function ReviewsPage() {
                                         )}
                                     </div>
                                     <div>
-                                        <p className="font-bold text-neutral-900">{review.user?.full_name || 'Verified User'}</p>
-                                        <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-tighter">Verified Experience</p>
+                                        <p className="font-bold text-neutral-900">{review.user?.full_name || 'सत्यापित उपयोगकर्ता'}</p>
+                                        <p className="text-[10px] text-neutral-400 uppercase font-bold tracking-tighter">सत्यापित अनुभव</p>
                                     </div>
                                 </div>
+
+                                {review.admin_reply && (
+                                    <div className="mt-6 border-t border-neutral-100 pt-6">
+                                        <div className="bg-neutral-50 p-6 rounded-2xl relative">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
+                                                    <Quote className="w-3 h-3 text-white fill-current" />
+                                                </div>
+                                                <span className="text-[10px] font-bold text-neutral-900 uppercase tracking-wider">NBF टीम का जवाब</span>
+                                            </div>
+                                            <p className="text-sm text-neutral-600 leading-relaxed italic">
+                                                "{review.admin_reply}"
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>

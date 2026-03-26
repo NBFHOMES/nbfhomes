@@ -48,8 +48,8 @@ export async function GET(request: Request) {
             const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
             const targetBase = isLocal ? origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
 
-            // Default to /profile if no specific next path is provided
-            const targetPath = (next === '/' || !next) ? '/profile' : next;
+            // Default to / if no specific next path is provided
+            const targetPath = (next === '/' || !next) ? '/' : next;
 
             return NextResponse.redirect(`${targetBase}${targetPath.startsWith('/') ? targetPath : `/${targetPath}`}`)
         }

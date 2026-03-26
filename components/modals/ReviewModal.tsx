@@ -17,7 +17,7 @@ interface ReviewModalProps {
 
 export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
     const { user } = useAuth();
-    const [rating, setRating] = useState(5);
+    const [rating, setRating] = useState(0);
     const [feedback, setFeedback] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
@@ -36,7 +36,7 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
         if (isOpen) {
             fetchRecent();
             setFeedback(generateHumanReview());
-            setRating(5);
+            setRating(0);
             setIsSuccess(false);
         }
     }, [isOpen]);
@@ -66,12 +66,12 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
             if (res.success) {
                 setIsSuccess(true);
                 onSuccess(); // Mark as reviewed forever
-                toast.success("Review saved to your profile!");
+                toast.success("समीक्षा आपकी प्रोफाइल में सेव हो गई है!");
             } else {
-                toast.error(res.error || "Failed to submit review");
+                toast.error(res.error || "समीक्षा जमा करने में विफल");
             }
         } catch (error) {
-            toast.error("An error occurred");
+            toast.error("एक त्रुटि हुई");
         } finally {
             setIsSubmitting(false);
         }
@@ -101,8 +101,8 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
 
                         <div className="p-8">
                             <div className="text-center mb-6">
-                                <h3 className="text-2xl font-bold text-neutral-900">Enjoying NBF Homes?</h3>
-                                <p className="text-neutral-500 text-sm mt-1">Help us grow by sharing your experience</p>
+                                <h3 className="text-2xl font-bold text-neutral-900">क्या आपको NBF होम्स पसंद आ रहे हैं?</h3>
+                                <p className="text-neutral-500 text-sm mt-1">अपनी स्टार रेटिंग चुनें और अनुभव साझा करें</p>
                             </div>
 
                             <div className="flex justify-center gap-2 mb-6">
@@ -121,18 +121,18 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
 
                             <div className="space-y-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 block">Your Feedback</label>
+                                    <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider mb-1.5 block">आपकी प्रतिक्रिया</label>
                                     <textarea
                                         value={feedback}
                                         onChange={(e) => setFeedback(e.target.value)}
-                                        className="w-full p-4 bg-neutral-50 border-2 border-neutral-100 rounded-xl focus:border-black outline-none min-h-[100px] text-sm resize-none transition-all"
-                                        placeholder="Experience with NBF Homes..."
+                                        className="w-full p-4 bg-neutral-50 border-2 border-neutral-100 rounded-xl focus:border-black outline-none min-h-[100px] text-sm resize-none transition-all text-neutral-700"
+                                        placeholder="NBF होम्स के साथ आपका अनुभव..."
                                     />
                                 </div>
 
                                 {/* Dynamic Suggestions */}
                                 <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">Suggested Reviews (Click to use)</p>
+                                    <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">सुझाई गई समीक्षाएँ (उपयोग करने के लिए क्लिक करें)</p>
                                     <div className="flex flex-col gap-2">
                                         {suggestions.map((s, idx) => (
                                             <button
@@ -148,10 +148,10 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
 
                                 <Button
                                     onClick={handleSubmit}
-                                    disabled={isSubmitting || !feedback.trim()}
+                                    disabled={isSubmitting || !feedback.trim() || rating === 0}
                                     className="w-full py-6 bg-black text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg hover:shadow-xl transition-all"
                                 >
-                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "Submit Review"}
+                                    {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : "समीक्षा जमा करें"}
                                 </Button>
                             </div>
                         </div>
@@ -165,8 +165,8 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
                         <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
                             <CheckCircle2 className="w-10 h-10" />
                         </div>
-                        <h3 className="text-2xl font-bold text-neutral-900 mb-2">Thank You!</h3>
-                        <p className="text-neutral-500 mb-8">Your review is live on our platform. Can you help us reach more people on Google?</p>
+                        <h3 className="text-2xl font-bold text-neutral-900 mb-2">आपका धन्यवाद!</h3>
+                        <p className="text-neutral-500 mb-8 px-2">आपकी समीक्षा हमारे प्लेटफॉर्म पर लाइव है। क्या आप गूगल पर और लोगों तक पहुँचने में हमारी मदद कर सकते हैं?</p>
 
                         <div className="space-y-3">
                             <Button
@@ -174,14 +174,14 @@ export function ReviewModal({ isOpen, onClose, onSuccess }: ReviewModalProps) {
                                 className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold flex items-center justify-center gap-2 shadow-lg"
                             >
                                 <ExternalLink className="w-5 h-5" />
-                                Rate on Google
+                                गूगल पर रेटिंग दें
                             </Button>
                             <Button
                                 variant="ghost"
                                 onClick={onClose}
                                 className="w-full h-12 text-neutral-400 font-medium"
                             >
-                                Maybe Later
+                                बाद में
                             </Button>
                         </div>
                     </motion.div>

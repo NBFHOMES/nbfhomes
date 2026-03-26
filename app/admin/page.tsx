@@ -27,7 +27,8 @@ import { SmartQRSection } from '@/components/admin/SmartQRSection';
 import { LeadActivityModal } from '@/components/admin/LeadActivityModal';
 import { SmartQRModal } from '@/components/admin/SmartQRModal';
 import { ActivityTimeline } from '@/components/admin/ActivityTimeline';
-import { QrCode, ScanLine } from 'lucide-react';
+import { QrCode, ScanLine, Star } from 'lucide-react';
+import { ReviewManagement } from '@/components/admin/ReviewManagement';
 
 // ... existing code ...
 
@@ -163,7 +164,7 @@ export default function AdminPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
-    const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'approvals' | 'settings' | 'ads' | 'inquiries' | 'leads' | 'appeals' | 'smart-qr'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'properties' | 'users' | 'approvals' | 'settings' | 'ads' | 'inquiries' | 'leads' | 'appeals' | 'smart-qr' | 'reviews'>('overview');
 
     const ITEMS_PER_PAGE = 10;
 
@@ -732,6 +733,7 @@ export default function AdminPage() {
         { id: 'appeals', label: 'Appeals', icon: AlertTriangle, action: () => { setActiveTab('appeals'); fetchSupportRequests(1); } },
         { id: 'ads', label: 'Manage Ads', icon: Megaphone, action: () => { setActiveTab('ads'); } },
         { id: 'smart-qr', label: 'Smart QR', icon: QrCode, action: () => { setActiveTab('smart-qr'); } },
+        { id: 'reviews', label: 'Reviews', icon: Star, action: () => { setActiveTab('reviews'); } },
         { id: 'settings', label: 'Settings', icon: Settings, action: () => { setActiveTab('settings'); fetchSettings(); } },
     ];
 
@@ -1701,6 +1703,10 @@ export default function AdminPage() {
 
                 {activeTab === 'smart-qr' && (
                     <SmartQRSection adminId={user?.id || ''} />
+                )}
+
+                {activeTab === 'reviews' && (
+                    <ReviewManagement adminId={user?.id || ''} />
                 )}
 
                 {/* Modals */}

@@ -952,3 +952,100 @@ export async function getReviewsAction(page: number = 1, limit: number = 20) {
 
     return { success: true, reviews: data || [], total: count || 0 };
 }
+
+export async function deleteReviewAction(reviewId: string, adminId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const isAdmin = await checkAdminStatus(adminId);
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+
+        if (error) {
+            console.error('Error deleting review:', error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath('/reviews');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error in deleteReviewAction:', error);
+        return { success: false, error: error.message || 'Unknown error' };
+    }
+}
+
+export async function replyToReviewAction(reviewId: string, reply: string, adminId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const isAdmin = await checkAdminStatus(adminId);
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        const { error } = await supabase
+            .from('reviews')
+            .update({
+                admin_reply: reply,
+                admin_reply_at: new Date().toISOString()
+            })
+            .eq('id', reviewId);
+
+        if (error) return { success: false, error: error.message };
+        
+        revalidatePath('/reviews');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function updateReviewStatusAction(reviewId: string, status: 'approved' | 'rejected' | 'blocked', adminId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const isAdmin = await checkAdminStatus(adminId);
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        const { error } = await supabase
+            .from('reviews')
+            .update({ status })
+            .eq('id', reviewId);
+
+        if (error) return { success: false, error: error.message };
+        
+        revalidatePath('/reviews');
+        return { success: true };
+    } catch (error: any) {
+        return { success: false, error: error.message };
+    }
+}
+
+export async function getReviewsAdminAction(page: number = 1, limit: number = 50) {
+    try {
+        const isAdmin = await checkAdminStatus();
+        if (!isAdmin) return { success: false, error: 'Unauthorized', reviews: [] };
+
+        const supabase = await getSupabaseClient();
+        const start = (page - 1) * limit;
+        const end = start + limit - 1;
+
+        const { data, error, count } = await supabase
+            .from('reviews')
+            .select(`
+                *,
+                user:users!reviews_user_id_fkey (
+                    full_name,
+                    email,
+                    avatar_url
+                )
+            `, { count: 'exact' })
+            .order('created_at', { ascending: false })
+            .range(start, end);
+
+        if (error) {
+            console.error('Error fetching admin reviews:', error);
+            return { success: false, error: error.message, reviews: [] };
+        }
+
+        return { success: true, reviews: data || [], total: count || 0 };
+    } catch (error: any) {
+        return { success: false, error: error.message, reviews: [] };
+    }
+}

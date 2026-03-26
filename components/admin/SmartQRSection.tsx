@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { generateQRCodesAction, getQRCodesAction, markQRDownloadedAction, deleteQRCodeAction } from '@/app/actions';
 import { getAdminUsers } from '@/lib/api';
-import { Download, Plus, Loader2, QrCode, ScanLine, User, CheckCircle2, AlertCircle, Camera, Trash2, CheckSquare, Square, Printer } from 'lucide-react';
+import { Download, Plus, Loader2, QrCode, ScanLine, User, CheckCircle2, AlertCircle, Camera, Trash2, CheckSquare, Square, Printer, Star } from 'lucide-react';
 import { useLoader } from '@/context/loader-context';
 import { toast } from 'sonner';
 import { SmartQRModal } from './SmartQRModal';
@@ -96,7 +97,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
         const qrSize = 400; // Large QR
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10`;
-        const img = new Image();
+        const img = new window.Image();
         img.crossOrigin = "Anonymous";
         img.src = qrUrl;
 
@@ -126,9 +127,117 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
 };
 
 
+// --- Helper: Review Poster Generator ---
+const generateReviewPosterCanvas = async (): Promise<HTMLCanvasElement | null> => {
+    const canvas = document.createElement('canvas');
+    const width = 800;
+    const height = 1100;
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+
+    // Background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // --- Header Section ---
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, height - 60, width, 60);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 16px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('POWERED BY NBF', 100, height - 25);
+    ctx.fillText('WWW.NBFHOMES.IN', width - 150, height - 25);
+
+    // Top Brand
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 24px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText('NBF HOMES', 50, 60);
+
+    // --- Main Text Content ---
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'center';
+
+    // Hindi Text 1: "हमें अपनी समीक्षा दें और"
+    ctx.font = 'bold 44px Arial';
+    ctx.fillText('"हमें अपनी समीक्षा दें और', width / 2, 220);
+
+    // Hindi Text 2: "बेहतर सेवा में मदद करें"'
+    ctx.fillText('बेहतर सेवा में मदद करें\"', width / 2, 280);
+
+    // Subtext
+    ctx.font = '22px Arial';
+    ctx.fillStyle = '#555555';
+    ctx.fillText('स्कैन करके गूगल पर अपनी राय साझा करें', width / 2, 350);
+    ctx.fillText('और हमें 5-स्टार रेटिंग दें!', width / 2, 385);
+
+
+    // --- QR Code ---
+    return new Promise((resolve) => {
+        const qrSize = 420;
+        const googleLink = 'https://g.page/r/CfKcwrl6aAEGEAE/review';
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(googleLink)}&margin=10`;
+        const img = new window.Image();
+        img.crossOrigin = "Anonymous";
+        img.src = qrUrl;
+
+        img.onload = () => {
+            const qrY = 440;
+            const qrX = (width - qrSize) / 2;
+            
+            // Draw QR Background/Shadow for rounded look feel
+            ctx.fillStyle = '#000000';
+            const r = 30;
+            ctx.beginPath();
+            ctx.moveTo(qrX-10+r, qrY-10);
+            ctx.arcTo(qrX+qrSize+10, qrY-10, qrX+qrSize+10, qrY+qrSize+10, r);
+            ctx.arcTo(qrX+qrSize+10, qrY+qrSize+10, qrX-10, qrY+qrSize+10, r);
+            ctx.arcTo(qrX-10, qrY+qrSize+10, qrX-10, qrY-10, r);
+            ctx.arcTo(qrX-10, qrY-10, qrX+qrSize+10, qrY-10, r);
+            ctx.closePath();
+            ctx.fill();
+
+            // Draw White Box inside
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(qrX-5, qrY-5, qrSize+10, qrSize+10);
+
+            // Draw QR
+            ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+
+            // --- Draw Logo in Middle ---
+            const logoSize = 100;
+            const logoImg = new window.Image();
+            // No crossOrigin for same-origin local assets to avoid potential dev server header issues
+            logoImg.src = "/icon.png";
+            logoImg.onload = () => {
+                // Circle backdrop for logo
+                ctx.beginPath();
+                ctx.arc(width/2, qrY + qrSize/2, logoSize/2 + 5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                ctx.drawImage(logoImg, (width - logoSize)/2, qrY + (qrSize - logoSize)/2, logoSize, logoSize);
+
+                // Footer CTA
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 26px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('[ SCAN TO RATE ON GOOGLE ]', width / 2, qrY + qrSize + 70);
+
+                resolve(canvas);
+            };
+            logoImg.onerror = () => resolve(canvas);
+        };
+        img.onerror = () => resolve(null);
+    });
+};
+
+
 export function SmartQRSection({ adminId }: { adminId: string }) {
     const { showLoader, hideLoader } = useLoader();
-    const [activeView, setActiveView] = useState<'users' | 'inventory'>('users');
+    const [activeView, setActiveView] = useState<'users' | 'inventory' | 'review'>('users');
 
     // Inventory State
     const [qrCodes, setQrCodes] = useState<QRInventoryItem[]>([]);
@@ -367,6 +476,13 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                     >
                         <ScanLine className="w-4 h-4" />
                         QR Inventory
+                    </button>
+                    <button
+                        onClick={() => setActiveView('review')}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2 ${activeView === 'review' ? 'bg-white shadow text-black' : 'text-neutral-500 hover:text-black'}`}
+                    >
+                        <Star className="w-4 h-4 text-yellow-500" />
+                        Review QR
                     </button>
                 </div>
             </div>
@@ -611,6 +727,84 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                             <button disabled={page === 1} onClick={() => setPage(p => p - 1)} className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 text-sm font-medium">Prev</button>
                             <span className="py-2 text-neutral-500 text-sm">Page {page}</span>
                             <button onClick={() => setPage(p => p + 1)} className="px-4 py-2 bg-white border rounded-lg text-sm font-medium">Next</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- REVIEW QR VIEW --- */}
+            {activeView === 'review' && (
+                <div className="max-w-xl mx-auto py-10 animate-in fade-in zoom-in duration-500">
+                    <div className="bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden">
+                        {/* Preview Header */}
+                        <div className="bg-neutral-900 text-white p-6 text-center">
+                            <h3 className="text-xl font-bold">Google Review Poster</h3>
+                            <p className="text-neutral-400 text-xs mt-1">Ready to Print (A4 Format)</p>
+                        </div>
+                        
+                        {/* Canvas Preview Simulation */}
+                        <div className="p-10 flex flex-col items-center gap-8 bg-neutral-50">
+                            <div className="w-full aspect-[1/1.414] bg-white shadow-inner border border-neutral-200 rounded-lg flex flex-col items-center p-8 overflow-hidden relative">
+                                {/* Simulated Poster Content */}
+                                <div className="text-2xl font-bold mb-4">NBF HOMES</div>
+                                <div className="text-center font-bold text-xl mb-4 px-4 leading-tight">
+                                    "हमें अपनी समीक्षा दें और <br/> बेहतर सेवा में मदद करें"
+                                </div>
+                                <div className="text-center text-xs text-neutral-500 mb-8 font-medium">
+                                    स्कैन करके गूगल पर अपनी राय साझा करें <br/> और 5-स्टार रेटिंग दें!
+                                </div>
+                                
+                                {/* The QR Symbol */}
+                                <div className="relative group">
+                                    <div className="w-48 h-48 border-4 border-black rounded-3xl p-2 flex items-center justify-center bg-white shadow-xl">
+                                        <QrCode className="w-32 h-32 text-neutral-900" />
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <div className="w-10 h-10 bg-white rounded-full border-2 border-neutral-900 flex items-center justify-center shadow-lg">
+                                                <Image src="/icon.png" alt="Logo" width={30} height={30} className="rounded-sm" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 text-[10px] font-bold text-neutral-400 uppercase tracking-widest text-center">
+                                        [ SCAN TO RATE ON GOOGLE ]
+                                    </div>
+                                </div>
+                                
+                                <div className="absolute bottom-6 left-0 right-0 flex justify-between px-8">
+                                    <span className="text-[10px] font-bold">WWW.NBFHOMES.IN</span>
+                                    <span className="text-[10px] font-bold">POWERED BY NBF</span>
+                                </div>
+                            </div>
+
+                            <div className="w-full space-y-3">
+                                <button
+                                    onClick={async () => {
+                                        showLoader();
+                                        try {
+                                            const canvas = await generateReviewPosterCanvas();
+                                            if (canvas) {
+                                                const link = document.createElement('a');
+                                                link.download = `NBF_Google_Review_Poster.png`;
+                                                link.href = canvas.toDataURL('image/png');
+                                                link.click();
+                                                toast.success("Review Poster Downloaded!");
+                                            }
+                                        } catch (e) {
+                                            console.error("Poster Generation Error:", e);
+                                            toast.error("Generation failed");
+                                        } finally {
+                                            hideLoader();
+                                        }
+                                    }}
+                                    className="w-full py-4 bg-black text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-neutral-800 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
+                                >
+                                    <Download className="w-5 h-5" />
+                                    Download high-quality Poster (PNG)
+                                </button>
+                                
+                                <p className="text-center text-[10px] text-neutral-400">
+                                    Points to: https://g.page/r/CfKcwrl6aAEGEAE/review
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
