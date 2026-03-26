@@ -22,7 +22,7 @@ export function ReviewManagement({ adminId }: { adminId: string }) {
             const res = await getReviewsAdminAction(page, 20);
             if (res.success) {
                 setReviews(res.reviews);
-                setTotal(res.total);
+                setTotal(res.total ?? 0);
             } else {
                 toast.error(res.error || "Failed to load reviews");
             }
