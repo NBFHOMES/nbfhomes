@@ -68,6 +68,7 @@ export async function Footer() {
               <h4 className="font-serif text-lg font-medium">Company</h4>
               <ul className="flex flex-col gap-4 text-neutral-400">
                 <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
+                <li><Link href="/reviews" className="hover:text-white transition-colors">Customer Reviews</Link></li>
                 <li><Link href="/connect" className="hover:text-white transition-colors">Connect & Socials</Link></li>
                 <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
                 <li><Link href="/sustainability" className="hover:text-white transition-colors">Sustainability</Link></li>

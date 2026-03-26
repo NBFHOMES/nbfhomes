@@ -10,9 +10,11 @@ import { ContactOptionsModal } from './contact-options-modal';
 import { FraudWarningModal } from './fraud-warning-modal';
 import { MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useReviews } from '@/lib/review-context';
 
 export function ContactOwner({ product, className }: { product: Product; className?: string }) {
   const { user } = useAuth();
+  const { trackPropertyContact } = useReviews();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showFraudModal, setShowFraudModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -37,6 +39,9 @@ export function ContactOwner({ product, className }: { product: Product; classNa
   };
 
   const executeWhatsAppAction = async () => {
+    // 0. Review System Tracking
+    trackPropertyContact(product.id);
+
     // 1. Track Lead
     if (user) {
 
@@ -74,6 +79,9 @@ Can I visit it tomorrow?`;
   };
 
   const executeContactAction = async () => {
+    // 0. Review System Tracking
+    trackPropertyContact(product.id);
+
     // 1. Track Lead
     if (user) {
       await trackLeadActivity({

@@ -11,6 +11,7 @@ import { LocationPermissionModal } from '@/components/modals/location-permission
 import { Collection } from '@/lib/types';
 import { LoaderProvider } from '@/context/loader-context';
 import { PropertyLoader } from '@/components/ui/property-loader';
+import { ReviewProvider } from '@/lib/review-context';
 
 export function ProvidersWrapper({
     children,
@@ -24,13 +25,15 @@ export function ProvidersWrapper({
             <AuthProvider>
                 <LocationProvider>
                     <RealtimeProvider>
-                        <NuqsAdapter>
-                            <Header collections={collections} />
-                            <LocationPermissionModal />
-                            <PropertyLoader />
-                            <Suspense>{children}</Suspense>
-                            <Toaster closeButton position="bottom-right" />
-                        </NuqsAdapter>
+                        <ReviewProvider>
+                            <NuqsAdapter>
+                                <Header collections={collections} />
+                                <LocationPermissionModal />
+                                <PropertyLoader />
+                                <Suspense>{children}</Suspense>
+                                <Toaster closeButton position="bottom-right" />
+                            </NuqsAdapter>
+                        </ReviewProvider>
                     </RealtimeProvider>
                 </LocationProvider>
             </AuthProvider>

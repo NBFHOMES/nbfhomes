@@ -895,3 +895,60 @@ export async function togglePropertyStatusUserAction(
 }
 
 
+
+// --- SMART REVIEW SYSTEM ACTIONS ---
+
+export async function submitReviewAction(rating: number, content: string): Promise<{ success: boolean; error?: string }> {
+    try {
+        const supabase = await getSupabaseClient();
+        const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+        if (authError || !user) {
+            return { success: false, error: 'Unauthorized: User not logged in' };
+        }
+
+        const { error } = await supabase.from('reviews').insert({
+            user_id: user.id,
+            rating,
+            content,
+            status: 'approved'
+        });
+
+        if (error) {
+            console.error('Error submitting review:', error);
+            return { success: false, error: error.message };
+        }
+
+        revalidatePath('/reviews');
+        return { success: true };
+    } catch (error: any) {
+        console.error('Error in submitReviewAction:', error);
+        return { success: false, error: error.message || 'Unknown error' };
+    }
+}
+
+export async function getReviewsAction(page: number = 1, limit: number = 20) {
+    const supabase = await getSupabaseClient();
+    const start = (page - 1) * limit;
+    const end = start + limit - 1;
+
+    const { data, error, count } = await supabase
+        .from('reviews')
+        .select(`
+            *,
+            user:users!reviews_user_id_fkey (
+                full_name,
+                avatar_url
+            )
+        `, { count: 'exact' })
+        .eq('status', 'approved')
+        .order('created_at', { ascending: false })
+        .range(start, end);
+
+    if (error) {
+        console.error('Error fetching reviews:', error);
+        return { success: false, error: error.message, reviews: [] };
+    }
+
+    return { success: true, reviews: data || [], total: count || 0 };
+}
