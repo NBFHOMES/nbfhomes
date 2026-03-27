@@ -76,7 +76,7 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 event: '*', 
                 schema: 'public', 
                 table: 'properties' 
-            }, (payload) => {
+            }, (payload: any) => {
                 console.log('[Real-time] UPDATE DETECTED:', payload.eventType, payload.new?.title);
                 
                 // 1. Force clear EVERYTHING from cache to ensure fresh start
