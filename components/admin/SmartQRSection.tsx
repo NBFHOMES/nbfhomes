@@ -73,56 +73,92 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.textAlign = 'center';
     ctx.fillText('NBF HOMES', width - 125, 57);
 
-    // --- Main Text Content ---
+    // --- Main Text Content (ADJUSTED FOR LARGER SIZE & SPACING) ---
     ctx.fillStyle = '#000000';
     ctx.textAlign = 'center';
 
     // Hindi Text 1: "हमारे यहाँ कमरे, फ्लैट और रूम"
-    ctx.font = 'bold 40px Arial';
-    ctx.fillText('"हमारे यहाँ कमरे, फ्लैट और रूम', width / 2, 250);
+    ctx.font = 'bold 54px Arial';
+    ctx.fillText('"हमारे यहाँ कमरे, फ्लैट और रूम', width / 2, 180); // Move higher
 
     // Hindi Text 2: "किराये पर उपलब्ध हैं।""
-    ctx.fillText('किराये पर उपलब्ध हैं।\"', width / 2, 300);
+    ctx.fillText('किराये पर उपलब्ध हैं।\"', width / 2, 265); // More gap (85px vs 60px)
 
-    // Instruction Text (Smaller)
-    ctx.font = '22px Arial';
-    ctx.fillStyle = '#555555';
-    ctx.fillText('सम्पर्क करने, फोटो(room) देखने और पूरी जानकारी', width / 2, 360);
+    // Instruction Text (Bigger & More Spaced)
+    ctx.font = 'bold 26px Arial';
+    ctx.fillStyle = '#444444';
+    ctx.fillText('सम्पर्क करने, फोटो(room) देखने और पूरी जानकारी', width / 2, 350); // More gap
     ctx.fillText('(Details) के लिए नीचे दिए गए QR Code को स्कैन करें।', width / 2, 390);
 
 
-    // --- QR Code ---
-    // We use a Promise to wait for image loading
+    // --- QR Code with Logo ---
     return new Promise((resolve) => {
-        const qrSize = 400; // Large QR
+        const qrSize = 420; // Massive QR
         const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10`;
-        const img = new window.Image();
-        img.crossOrigin = "Anonymous";
-        img.src = qrUrl;
+        
+        const qrImg = new window.Image();
+        const logoImg = new window.Image();
+        
+        qrImg.crossOrigin = "Anonymous";
+        logoImg.crossOrigin = "Anonymous";
+        
+        qrImg.src = qrUrl;
+        logoImg.src = "/icon.png";
 
-        img.onload = () => {
-            const qrY = 450;
-            ctx.drawImage(img, (width - qrSize) / 2, qrY, qrSize, qrSize);
+        qrImg.onload = () => {
+            const qrY = 460; // QR pushed slightly lower to avoid clash with subtext
+            const qrX = (width - qrSize) / 2;
+            
+            // Draw Main QR
+            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-            // "SCAN FOR DETAILS" Text below QR
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 24px Arial';
-            ctx.textAlign = 'center';
-            ctx.fillText('[ SCAN FOR DETAILS ]', width / 2, qrY + qrSize + 50);
+            // Draw Logo in center if available
+            logoImg.onload = () => {
+                const logoSize = 100;
+                const lx = qrX + (qrSize - logoSize) / 2;
+                const ly = qrY + (qrSize - logoSize) / 2;
+                
+                // Draw rounded background for logo to "excavate" the center
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.roundRect(lx - 5, ly - 5, logoSize + 10, logoSize + 10, 15);
+                ctx.fill();
+                
+                ctx.drawImage(logoImg, lx, ly, logoSize, logoSize);
 
-            // Add ID in corner for reference
-            ctx.fillStyle = '#aaaaaa';
-            ctx.font = 'bold 14px Courier New';
-            ctx.textAlign = 'right';
-            ctx.fillText(`ID: ${code}`, width - 30, height - 70);
+                // Finalize Text
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 28px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('[ SCAN FOR DETAILS ]', width / 2, qrY + qrSize + 60);
 
-            resolve(canvas);
+                // Add ID in corner
+                ctx.fillStyle = '#999999';
+                ctx.font = 'bold 18px Courier New';
+                ctx.textAlign = 'right';
+                ctx.fillText(`ID: MDS_${code.toUpperCase()}`, width - 40, height - 80);
+
+                resolve(canvas);
+            };
+
+            // If logo fails, still resolve with QR
+            logoImg.onerror = () => {
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 28px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('[ SCAN FOR DETAILS ]', width / 2, qrY + qrSize + 60);
+                
+                ctx.fillStyle = '#999999';
+                ctx.font = 'bold 18px Courier New';
+                ctx.textAlign = 'right';
+                ctx.fillText(`ID: MDS_${code.toUpperCase()}`, width - 40, height - 80);
+                
+                resolve(canvas);
+            };
         };
 
-        img.onerror = () => {
-            resolve(null);
-        };
+        qrImg.onerror = () => resolve(null);
     });
 };
 

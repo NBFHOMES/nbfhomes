@@ -39,6 +39,32 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         }
     }, []);
 
+    const handleLocationError = (error: any, reject: any) => {
+        if (error.code === 1) {
+            console.warn("Location permission denied by user.");
+        } else {
+            console.error("Location retrieval failed:", error.message || "Unknown error");
+        }
+
+        let msg = "Could not fetch location. Please try again.";
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                msg = "Location permission denied. Please enable it in browser settings.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                msg = "Location information is unavailable.";
+                break;
+            case error.TIMEOUT:
+                msg = "Location request timed out.";
+                break;
+            default:
+                msg = error.message || "An unknown error occurred.";
+        }
+
+        toast.error(msg);
+        reject(error);
+    };
+
     const requestLocation = async () => {
         return new Promise<void>((resolve, reject) => {
             if (!navigator.geolocation) {
@@ -47,48 +73,37 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
                 return;
             }
 
+            const successCallback = (position: any) => {
+                const loc = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                setUserLocation(loc);
+                sessionStorage.setItem('nbf_user_location', JSON.stringify(loc));
+                toast.success("Location updated successfully");
+                resolve();
+            };
+
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const loc = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    };
-                    setUserLocation(loc);
-                    sessionStorage.setItem('nbf_user_location', JSON.stringify(loc));
-                    toast.success("Location updated successfully");
-                    resolve();
-                },
+                successCallback,
                 (error) => {
-                    // Graceful error logging
-                    if (error.code === 1) {
-                        console.warn("Location permission denied by user.");
+                    // FALLBACK: If high accuracy failed (Timeout/Unavailable), try standard accuracy
+                    // BUT be more patient for high accuracy first.
+                    if (error.code === error.TIMEOUT || error.code === error.POSITION_UNAVAILABLE) {
+                        console.warn("High accuracy failed or timed out. Falling back to standard mode...");
+                        navigator.geolocation.getCurrentPosition(
+                            successCallback,
+                            (innerError) => handleLocationError(innerError, reject),
+                            { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 }
+                        );
                     } else {
-                        console.error("Location retrieval failed:", error.message || "Unknown error");
+                        handleLocationError(error, reject);
                     }
-
-                    let msg = "Could not fetch location. Please try again.";
-
-                    switch (error.code) {
-                        case error.PERMISSION_DENIED:
-                            msg = "Location permission denied. Please enable it in browser settings.";
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            msg = "Location information is unavailable.";
-                            break;
-                        case error.TIMEOUT:
-                            msg = "Location request timed out.";
-                            break;
-                        default:
-                            msg = error.message || "An unknown error occurred.";
-                    }
-
-                    toast.error(msg);
-                    reject(error);
                 },
                 {
                     enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
+                    timeout: 35000, // Very patient for GPS (35s)
+                    maximumAge: 0 // Force fresh lock when requested
                 }
             );
         });

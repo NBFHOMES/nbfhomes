@@ -100,6 +100,30 @@ export async function checkAdminStatus(legacyUserId?: string): Promise<boolean> 
     }
 }
 
+/**
+ * Fetches unique cities that have at least one approved property.
+ * Used for the dynamic search dropdown.
+ */
+export async function getApprovedCitiesAction() {
+    try {
+        const { data, error } = await globalSupabase
+            .rpc('get_active_cities');
+
+        if (error) throw error;
+
+        return {
+            success: true,
+            cities: (data as any[] || []).map(item => ({
+                name: item.city_names,
+                count: item.property_count
+            }))
+        };
+    } catch (error: any) {
+        console.error('Error fetching approved cities:', error);
+        return { success: false, cities: [], error: error.message };
+    }
+}
+
 // Admin action to update product status
 export async function updateProductStatusAction(
     productId: string,
@@ -115,7 +139,8 @@ export async function updateProductStatusAction(
         // Use context-aware client to leverage RLS policies
         const supabase = await getSupabaseClient();
 
-        const newStatus = availableForSale ? 'approved' : 'inactive';
+        // When admin deactivates, we set status to 'rejected' so user cannot override
+        const newStatus = availableForSale ? 'approved' : 'rejected';
 
         const { data, error } = await supabase
             .from('properties')
@@ -133,6 +158,8 @@ export async function updateProductStatusAction(
         }
 
         revalidatePath('/', 'layout');
+        revalidatePath('/profile', 'page');
+        revalidatePath('/admin', 'page');
 
         return { success: true };
     } catch (error: any) {

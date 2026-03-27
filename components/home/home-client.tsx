@@ -12,22 +12,54 @@ import { getLabelPosition } from '@/lib/utils';
 import { INDIAN_CITIES } from '@/constants/cities';
 import { useAuth } from '@/lib/auth-context';
 import { BannedView } from '@/components/common/banned-view';
+import { useLocationDiscovery } from '@/hooks/use-location-discovery';
+import { getProducts } from '@/lib/api';
+import { MapPin, Navigation, Loader2 } from 'lucide-react';
 
 interface HomeClientProps {
     initialProducts: Product[];
     adSettings?: AdSettings | null;
 }
 
+const DISCOVERY_CACHE_KEY = 'nbf_discovery_cache_v1';
+const DISCOVERY_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
 export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
     const { profile, isLoading } = useAuth();
+    
+    // --- HYDRATION-SAFE INITIALIZATION ---
+    // We MUST initialize with server-safe defaults (initialProducts) 
+    // to prevent "patelji vs sushil" hydration errors.
     const [filteredProducts, setFilteredProducts] = useState(initialProducts);
+    const [nearbyLocationName, setNearbyLocationName] = useState<string | null>(null);
+    const [lastFetchCoords, setLastFetchCoords] = useState<{lat: number, lon: number} | null>(null);
+    const [isSearchingNearby, setIsSearchingNearby] = useState(false);
+    const { location, loading: locationLoading, permissionState, updateLocation } = useLocationDiscovery();
+
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => {
+        setMounted(true);
+        
+        // 1. RE-HYDRATE DISCOVERY CACHE AFTER MOUNT
+        // This ensures the first client render matches server (initialProducts),
+        // and then we instantly switch to discovery results.
+        try {
+            const stored = localStorage.getItem(DISCOVERY_CACHE_KEY);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Date.now() - parsed.timestamp < DISCOVERY_TTL_MS) {
+                    setFilteredProducts(parsed.products);
+                    setNearbyLocationName(parsed.locationName);
+                    setLastFetchCoords(parsed.coords);
+                    console.log(`Sticky Discovery: Restored ${parsed.locationName} from cache.`);
+                }
+            }
+        } catch (e) {
+            console.error("Discovery cache hydration error", e);
+        }
+    }, []);
 
     const router = require('next/navigation').useRouter();
-
-    // 1. Sync updated server props to local state if server re-renders (Router Refresh)
-    useEffect(() => {
-        setFilteredProducts(initialProducts);
-    }, [initialProducts]);
 
     // 2. Real-time Supabase Data Sync (Instant PWA Updates)
     useEffect(() => {
@@ -40,7 +72,6 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
             }
         }
 
-        // Keep page synchronized globally across all PWA and web sessions!
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -49,7 +80,7 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
 
         const channel = supabase.channel('home_properties_sync')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, () => {
-                console.log('[Real-time] Global property update detected. Refreshing UI seamlessly...');
+                console.log('[Real-time] Global property update detected.');
                 router.refresh(); 
             })
             .subscribe();
@@ -59,26 +90,142 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
         };
     }, [router]);
 
-    const handleSearch = useCallback((query: string) => {
+    // 3. Smart Discovery: Auto-detect location and find nearby properties (with Throttling)
+    useEffect(() => {
+        if (!mounted || !location?.lat || !location?.lon) return;
+
+        const handleLocationDiscovery = async () => {
+            const { calculateDistance } = require('@/lib/geocoding');
+            
+            // --- THROTTLING LOGIC ---
+            // If we have data for THIS location (within 5km now for better sensitivity) AND it's < 30 mins old, SKIP fetch.
+            if (lastFetchCoords) {
+                const dist = calculateDistance(location.lat, location.lon, lastFetchCoords.lat, lastFetchCoords.lon);
+                // Reduce threshold to 5km to address "stuck" feeling, while keeping stability
+                if (dist < 5) return; 
+            }
+
+            setIsSearchingNearby(true);
+            const locationDisplayName = location.area && location.area !== location.city 
+                ? `${location.area}, ${location.city}` 
+                : (location.city || "Nearby Areas");
+            
+            console.log(`Smart Discovery: Browser reported coords (${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}) -> ${locationDisplayName}`);
+
+            try {
+                // --- TIERED DISCOVERY (RAPIDO STYLE) ---
+                // Step 1: Hyper-local Search (10km)
+                console.log(`Tiered Discovery: Checking 10km radius...`);
+                let nearby = await getProducts({ 
+                    lat: location.lat, 
+                    lng: location.lon, 
+                    radius: 10000 
+                });
+                
+                let activeRadius = 10;
+
+                // Step 2: District-wide Fallback (60km) - ONLY if 10km is empty
+                if (!nearby || nearby.length === 0) {
+                    console.log(`Tiered Discovery: Nothing in 10km. Expanding to 60km district-wide search...`);
+                    nearby = await getProducts({ 
+                        lat: location.lat, 
+                        lng: location.lon, 
+                        radius: 60000 
+                    });
+                    activeRadius = 60;
+                }
+                
+                if (nearby && nearby.length > 0) {
+                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby in ${location.city} District (60km)`;
+                    setFilteredProducts(nearby);
+                    setNearbyLocationName(radiusLabel);
+                    
+                    const freshCache = {
+                        products: nearby,
+                        locationName: radiusLabel,
+                        coords: { lat: location.lat, lon: location.lon },
+                        timestamp: Date.now()
+                    };
+                    setLastFetchCoords(freshCache.coords);
+                    localStorage.setItem(DISCOVERY_CACHE_KEY, JSON.stringify(freshCache));
+                } else {
+                    // Step 3: Truly Empty (No properties in 60km)
+                    setFilteredProducts([]);
+                    setNearbyLocationName(`No properties found within 60km of ${location.city}`);
+                    localStorage.removeItem(DISCOVERY_CACHE_KEY);
+                }
+                setIsSearchingNearby(false);
+            } catch (error) {
+                console.error('Smart Discovery Error:', error);
+                setIsSearchingNearby(false);
+            }
+        };
+
+        handleLocationDiscovery();
+    }, [mounted, location, lastFetchCoords]);
+
+    const handleSearch = useCallback(async (query: string) => {
         if (!query.trim()) {
             setFilteredProducts(initialProducts);
+            setNearbyLocationName(location?.city || null);
             return;
         }
 
+        setIsSearchingNearby(true);
+        // ... rest of handleSearch logic remains the same
         const lowerQuery = query.toLowerCase();
 
-        // Filter products based on query matching Title, City, or Address
+        // 1. CLIENT-SIDE Filter (Instant)
         const filtered = initialProducts.filter(product => {
             const titleMatch = product.title.toLowerCase().includes(lowerQuery);
-            const cityMatch = product.tags?.[1]?.toLowerCase().includes(lowerQuery);
-            const areaMatch = product.tags?.[2]?.toLowerCase().includes(lowerQuery);
+            const cityMatch = product.tags?.some(tag => tag.toLowerCase().includes(lowerQuery));
             const addressMatch = product.description.toLowerCase().includes(lowerQuery);
-
-            return titleMatch || cityMatch || areaMatch || addressMatch;
+            return titleMatch || cityMatch || addressMatch;
         });
 
-        setFilteredProducts(filtered);
-    }, [initialProducts]);
+        if (filtered.length > 0) {
+            setFilteredProducts(filtered);
+            setNearbyLocationName(query);
+            setIsSearchingNearby(false);
+            return;
+        }
+
+        // 2. SERVER-SIDE Query (Fallback)
+        try {
+            console.log(`No client-side matches for "${query}". Checking server...`);
+            const serverResults = await getProducts({ query: lowerQuery });
+            
+            if (serverResults && serverResults.length > 0) {
+                setFilteredProducts(serverResults);
+                setNearbyLocationName(query);
+            } else {
+                // 3. NEARBY Fallback (Discovery)
+                if (location?.lat && location?.lon) {
+                    console.log(`Truly no results for "${query}". Showing nearby properties for user instead.`);
+                    const nearby = await getProducts({ 
+                        lat: location.lat, 
+                        lng: location.lon, 
+                        radius: 10000 
+                    });
+                    if (nearby && nearby.length > 0) {
+                        setFilteredProducts(nearby);
+                        setNearbyLocationName(`nearby area (Results for "${query}" not found)`);
+                    } else {
+                        setFilteredProducts([]); // truly empty
+                        setNearbyLocationName(null);
+                    }
+                } else {
+                    setFilteredProducts([]);
+                    setNearbyLocationName(null);
+                }
+            }
+        } catch (error) {
+            console.error('Search fallback error:', error);
+            setFilteredProducts([]);
+        } finally {
+            setIsSearchingNearby(false);
+        }
+    }, [initialProducts, location]);
 
     // Removed blocking isLoading check so that SSR HTML paints immediately!
     // Banned check will still gracefully take over once auth resolves in the background.
@@ -108,16 +255,62 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 >
                     <div className="mt-12 md:mt-0" suppressHydrationWarning>
                         {/* SEO H1 */}
-                        <h1 className="sr-only">Best PGs and Rooms in Mandsaur</h1>
+                        <h1 className="sr-only">Best PGs and Rooms in {!mounted ? 'Mandsaur' : (location?.city || 'Mandsaur')}</h1>
 
                         {/* Suppress hydration warning for responsive classes */}
-                        <h3
-                            suppressHydrationWarning
-                            className="text-2xl md:text-4xl font-serif font-bold text-neutral-900 mb-2"
-                        >
-                            Featured Properties
-                        </h3>
-                        <p className="text-gray-600 pt-2">Handpicked PGs and flats for you.</p>
+                        <div className="flex flex-col gap-1" suppressHydrationWarning>
+                            <h3
+                                suppressHydrationWarning
+                                className="text-2xl md:text-4xl font-serif font-bold text-neutral-900 flex items-center gap-3"
+                            >
+                                {!mounted ? 'Featured Properties' : (
+                                    locationLoading ? 'Locking GPS Satellite...' :
+                                    isSearchingNearby ? 'Finding nearby...' : 
+                                    nearbyLocationName ? `Properties in ${nearbyLocationName}` : 
+                                    'Featured Properties'
+                                )}
+                                {mounted && nearbyLocationName && !isSearchingNearby && !locationLoading && (
+                                    <div className="flex items-center gap-2" suppressHydrationWarning>
+                                        <MapPin className="w-5 h-5 md:w-8 md:h-8 text-amber-500 animate-bounce" />
+                                        <button 
+                                            onClick={() => {
+                                                localStorage.removeItem(DISCOVERY_CACHE_KEY);
+                                                setLastFetchCoords(null);
+                                                updateLocation();
+                                            }}
+                                            className="text-[10px] h-6 px-2 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors uppercase tracking-widest font-sans font-bold text-neutral-400"
+                                        >
+                                            Refresh
+                                        </button>
+                                    </div>
+                                )}
+                                {mounted && (isSearchingNearby || locationLoading) && (
+                                    <Loader2 className="w-5 h-5 md:w-8 md:h-8 text-neutral-400 animate-spin" />
+                                )}
+                            </h3>
+                            <div className="flex items-center gap-2 pt-2" suppressHydrationWarning>
+                                <p className="text-gray-600" suppressHydrationWarning>
+                                    {!mounted ? 'Handpicked PGs and flats for you.' : (
+                                        locationLoading ? 'Wait a moment while we find your exact area...' :
+                                        nearbyLocationName 
+                                            ? `Showing the best properties in and around ${nearbyLocationName}` 
+                                            : 'Handpicked PGs and flats for you.')
+                                    }
+                                </p>
+                                {mounted && permissionState === 'prompt' && !location && (
+                                    <button 
+                                        onClick={() => {
+                                            localStorage.removeItem(DISCOVERY_CACHE_KEY);
+                                            // setCachedData is not available anymore, it was a derived state but we handle it elsewhere
+                                            updateLocation();
+                                        }}
+                                        className="text-xs font-bold text-amber-600 hover:text-amber-700 underline flex items-center gap-1"
+                                    >
+                                        <Navigation className="w-3 h-3" /> Detect Location
+                                    </button>
+                                )}
+                            </div>
+                        </div>
                     </div>
                     {/* Premium View All Button */}
                     <Link
@@ -128,19 +321,20 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                     </Link>
                 </div>
 
-                {filteredProducts.length > 0 ? (
-                    <div className="flex flex-col gap-y-10 p-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-x-8 md:gap-y-12">
-                        {filteredProducts.map((product: any, index: number) => (
-                            <LatestProductCard
-                                key={product.id}
-                                product={product}
-                                labelPosition={getLabelPosition(index)}
-                                className="w-full"
-                            />
-                        ))}
-                    </div>
-                ) : (
-                    <div className="flex flex-col items-center justify-center h-[30vh] gap-4">
+                <div suppressHydrationWarning className="w-full">
+                    {filteredProducts.length > 0 ? (
+                        <div className="flex flex-col gap-y-10 p-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-x-8 md:gap-y-12" suppressHydrationWarning>
+                            {filteredProducts.map((product: any, index: number) => (
+                                <LatestProductCard
+                                    key={product.id}
+                                    product={product}
+                                    labelPosition={getLabelPosition(index)}
+                                    className="w-full"
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center h-[30vh] gap-4" suppressHydrationWarning>
                         <div className="w-16 h-16 bg-neutral-100 rounded-full flex items-center justify-center text-3xl">
                             🔍
                         </div>
@@ -158,6 +352,7 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                         </button>
                     </div>
                 )}
+                </div>
 
                 <div className="mt-12 text-center md:hidden">
                     <Link

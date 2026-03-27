@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download, EyeOff, Eye } from 'lucide-react';
+import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download, EyeOff, Eye, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
 import { getUserProducts, deleteProduct, updateProduct } from '@/lib/api';
@@ -147,14 +147,14 @@ export default function ProfilePage() {
 
     const handleToggleStatus = async (property: Product) => {
         setTogglingPropertyId(property.id);
-        const newIsActive = !(property.availableForSale && property.status === 'approved');
+        const newIsActive = !property.availableForSale; // Simple toggle
         
         try {
+            // ONLY update available_for_sale. NEVER update status from the user profile.
             const { error: updateError } = await supabase
                 .from('properties')
                 .update({
                     available_for_sale: newIsActive,
-                    status: newIsActive ? 'approved' : 'inactive',
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', property.id);
@@ -162,10 +162,10 @@ export default function ProfilePage() {
             if (!updateError) {
                 setProperties(properties.map(p => 
                     p.id === property.id 
-                        ? { ...p, availableForSale: newIsActive, status: newIsActive ? 'approved' : 'inactive' } 
+                        ? { ...p, availableForSale: newIsActive } 
                         : p
                 ));
-                toast.success(newIsActive ? 'Property is now Active and visible' : 'Property is now marked as Rented (Inactive)');
+                toast.success(newIsActive ? 'Property is now Active and visible' : 'Property is now marked as Rented (Hidden)');
             } else {
                 console.error("Supabase update error:", updateError);
                 toast.error(updateError.message || 'Failed to update property status');
@@ -330,11 +330,11 @@ export default function ProfilePage() {
                                                     <div className="absolute top-2 left-2 z-10">
                                                         {property.status === 'pending' ? (
                                                             <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm bg-orange-500 text-white">
-                                                                Pending Approval
+                                                                Pending NBF Approval
                                                             </span>
                                                         ) : property.status === 'rejected' ? (
                                                             <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm bg-red-600 text-white">
-                                                                Rejected
+                                                                Not Approved by NBF
                                                             </span>
                                                         ) : (
                                                             <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded shadow-sm ${property.availableForSale && property.status === 'approved' ? 'bg-green-500 text-white' : 'bg-neutral-600 text-white'}`}>
@@ -370,8 +370,8 @@ export default function ProfilePage() {
 
                                                     {/* Actions */}
                                                     <div className="mt-2 flex flex-wrap sm:flex-nowrap gap-1.5 relative z-10 w-full">
-                                                        {/* Toggle Active/Rented Button (Hidden if Pending or Rejected) */}
-                                                        {property.status !== 'pending' && property.status !== 'rejected' && (
+                                                        {/* Toggle Active/Rented Button */}
+                                                        {property.status === 'approved' ? (
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.preventDefault();
@@ -379,25 +379,43 @@ export default function ProfilePage() {
                                                                 }}
                                                                 disabled={togglingPropertyId === property.id}
                                                                 className={`flex-1 min-w-[30%] flex items-center justify-center gap-1 py-1.5 text-[10px] font-bold uppercase rounded transition-colors ${
-                                                                    property.availableForSale && property.status === 'approved' 
+                                                                    property.availableForSale
                                                                     ? 'text-amber-700 bg-amber-50 hover:bg-amber-100' 
                                                                     : 'text-green-700 bg-green-50 hover:bg-green-100'
                                                                 }`}
                                                             >
                                                                 {togglingPropertyId === property.id ? (
                                                                     <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-                                                                ) : (property.availableForSale && property.status === 'approved') ? (
+                                                                ) : property.availableForSale ? (
                                                                     <>
                                                                         <EyeOff className="w-3 h-3" />
-                                                                        Rented
+                                                                        Go Rented
                                                                     </>
                                                                 ) : (
                                                                     <>
                                                                         <Eye className="w-3 h-3" />
-                                                                        Active
+                                                                        Go Live
                                                                     </>
                                                                 )}
                                                             </button>
+                                                        ) : (
+                                                            <div className={`flex-1 min-w-[30%] flex items-center justify-center gap-1 py-1.5 text-[9px] font-bold uppercase rounded border ${
+                                                                property.status === 'pending' 
+                                                                ? 'text-orange-600 bg-orange-50 border-orange-100' 
+                                                                : 'text-red-700 bg-red-50 border-red-100'
+                                                            }`}>
+                                                                {property.status === 'pending' ? (
+                                                                    <>
+                                                                        <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                                                                        Pending NBF
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <XCircle className="w-3 h-3" />
+                                                                        Not Approved
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                         )}
                                                         <button
                                                             onClick={(e) => {

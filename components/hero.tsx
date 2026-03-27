@@ -13,6 +13,7 @@ const HeroSearch = dynamic(() => import('./hero-search').then(m => m.HeroSearch)
 });
 
 import { useState, useEffect } from 'react';
+import { getApprovedCitiesAction } from '@/app/actions';
 
 // Define Prop Type to include onSearch
 interface HeroProps {
@@ -20,6 +21,16 @@ interface HeroProps {
 }
 
 export function Hero({ onSearch }: HeroProps) {
+    const [cities, setCities] = useState<{name: string, count: number}[]>([]);
+
+    useEffect(() => {
+        getApprovedCitiesAction().then(res => {
+            if (res.success) {
+                setCities(res.cities);
+            }
+        });
+    }, []);
+
     return (
         <div suppressHydrationWarning className="relative min-h-[50vh] h-auto pb-10 md:min-h-[80vh] w-full overflow-hidden group">
             <div className="absolute inset-0 size-full block">
@@ -59,7 +70,7 @@ export function Hero({ onSearch }: HeroProps) {
 
                     {/* Functional Search Bar */}
                     <div className="w-[92%] md:w-full flex justify-center mt-8 md:mt-10">
-                        <HeroSearch />
+                        <HeroSearch cities={cities} onSearch={onSearch} />
                     </div>
                 </div>
             </div>

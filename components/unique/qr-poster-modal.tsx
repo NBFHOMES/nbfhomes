@@ -183,7 +183,7 @@ export function QRPosterModal({ isOpen, onClose, property, user }: QRPosterModal
                                     {/* Headline - Larger */}
                                     <div className="w-[95%] mx-auto max-h-[60%] flex items-center justify-center overflow-hidden shrink-0">
                                         <h1
-                                            className={`font-black ${textClass} leading-none tracking-tight whitespace-pre-wrap break-all text-center`}
+                                            className={`font-black ${textClass} leading-snug tracking-tight whitespace-pre-wrap break-all text-center`}
                                             style={{
                                                 fontFamily: 'sans-serif',
                                                 // Increased Sizes

@@ -105,11 +105,52 @@ export async function POST(request: NextRequest) {
         console.log('POST /products body:', body);
 
         // Validate and sanitize inputs
-        let { query, limit, sortKey, reverse, minPrice, maxPrice, location, propertyType, amenities } = body;
+        let { query, limit, sortKey, reverse, minPrice, maxPrice, location, propertyType, amenities, lat, lng, radius } = body;
 
         const safeLimit = limit && validateInput(limit, 'number')
             ? Math.max(1, Math.min(Math.floor(limit), 50))
             : 24;
+
+        // --- Priority 0: Explicit Coordinate Search (Smart Discovery) ---
+        if (lat !== undefined && lng !== undefined) {
+            const searchLat = parseFloat(lat);
+            const searchLng = parseFloat(lng);
+            const searchRadius = parseFloat(radius || '10000'); // Default 10km if not specified
+
+            if (!isNaN(searchLat) && !isNaN(searchLng)) {
+                console.log(`API POST: Coordinate Search detected at (${searchLat}, ${searchLng}) with ${searchRadius}m radius`);
+                
+                const { data: nearby, error: rpcError } = await supabase.rpc('get_nearby_properties', {
+                    user_lat: searchLat,
+                    user_lng: searchLng,
+                    radius_meters: searchRadius
+                });
+
+                if (!rpcError && nearby) {
+                    let results = (nearby as any[]).map(mapPropertyToProduct);
+                    
+                    // Apply common filters to nearby results
+                    if (minPrice !== undefined) {
+                        const min = parseFloat(minPrice);
+                        results = results.filter(p => {
+                            const priceVal = p.price?.toString() || p.priceRange?.minVariantPrice?.amount || '0';
+                            return parseFloat(priceVal) >= min;
+                        });
+                    }
+                    if (maxPrice !== undefined) {
+                        const max = parseFloat(maxPrice);
+                        results = results.filter(p => {
+                            const priceVal = p.price?.toString() || p.priceRange?.minVariantPrice?.amount || '0';
+                            return parseFloat(priceVal) <= max;
+                        });
+                    }
+
+                    console.log(`API POST: Coordinate search found ${results.length} nearby properties.`);
+                    return NextResponse.json(results);
+                }
+                console.warn("API POST: Coordinate search RPC failed", rpcError);
+            }
+        }
 
         if (query && validateInput(query, 'string')) {
             query = sanitizeInput(query);

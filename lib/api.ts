@@ -205,6 +205,9 @@ export async function getProducts(params?: {
   city?: string;
   area?: string;
   type?: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
 }): Promise<Product[]> {
   // Client-side: use API
   if (typeof window !== 'undefined') {
@@ -223,6 +226,24 @@ export async function getProducts(params?: {
   try {
     const limit = params?.limit || 24;
     const safeLimit = Math.max(1, Math.min(Math.floor(limit), 50));
+
+    // --- Priority 0: Geo-Proximity Search (Coordinate based) ---
+    // If explicit coordinates are provided, we prioritize the RPC spatial query
+    if (params?.lat && params?.lng) {
+      const radius = params.radius || 10000; // Default 10km
+      const { data: nearby, error: rpcError } = await supabase.rpc('get_nearby_properties', {
+        user_lat: params.lat,
+        user_lng: params.lng,
+        radius_meters: radius
+      });
+
+      if (!rpcError && nearby) {
+        let results = (nearby as any[]).map(mapPropertyToProduct);
+        console.log(`Server getProducts: Coordinate search found ${results.length} results within ${radius/1000}km`);
+        return results;
+      }
+      console.warn('Server getProducts: Coordinate search RPC error or no results:', rpcError);
+    }
 
     let dbQuery = supabase
       .from("properties")
