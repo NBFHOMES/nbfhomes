@@ -92,7 +92,7 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 
                 console.log('[Real-time] UI Refresh triggered for new property.');
             })
-            .subscribe((status) => {
+            .subscribe((status: any) => {
                 console.log('[Real-time] Subscription status:', status);
                 if (status === 'CHANNEL_ERROR') {
                     console.error('[Real-time] FAILED to connect. Check if Realtime is enabled in Supabase Dashboard.');
