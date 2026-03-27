@@ -69,29 +69,38 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
 
+        console.log('[Real-time] Initializing Supabase Realtime subscription...');
+
         const channel = supabase.channel('home_properties_realtime')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, (payload) => {
-                console.log('[Real-time] Property change detected:', payload.eventType);
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'properties' 
+            }, (payload) => {
+                console.log('[Real-time] UPDATE DETECTED:', payload.eventType, payload.new?.title);
                 
-                // Clear local discovery cache so fresh data is fetched
+                // 1. Force clear EVERYTHING from cache to ensure fresh start
                 localStorage.removeItem(DISCOVERY_CACHE_KEY);
+                sessionStorage.removeItem('nbf_discovery_coords'); // Extra safety
                 
-                // Trigger Router Refresh to get fresh Server Props
+                // 2. Trigger Router Refresh (Updates Server Props / initialProducts)
                 router.refresh();
 
-                // Re-trigger location discovery if we have a location
-                if (location?.lat && location?.lon) {
-                    setLastFetchCoords(null); // This triggers the Discovery useEffect
-                } else {
-                    // Fallback: If no discovery, just update state from new props when they arrive
-                    // (Handled by the Sync Props effect below)
-                }
+                // 3. Re-trigger location discovery instantly
+                // Resetting lastFetchCoords triggers the discovery useEffect
+                setLastFetchCoords(null);
+                
+                console.log('[Real-time] UI Refresh triggered for new property.');
             })
             .subscribe((status) => {
                 console.log('[Real-time] Subscription status:', status);
+                if (status === 'CHANNEL_ERROR') {
+                    console.error('[Real-time] FAILED to connect. Check if Realtime is enabled in Supabase Dashboard.');
+                }
             });
 
         return () => {
+            console.log('[Real-time] Cleaning up subscription...');
             supabase.removeChannel(channel);
         };
     }, [router, location]);
@@ -126,35 +135,63 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
             console.log(`Smart Discovery: Browser reported coords (${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}) -> ${locationDisplayName}`);
 
             try {
-                // --- TIERED DISCOVERY (RAPIDO STYLE) ---
-                // Step 1: Hyper-local Search (10km)
-                console.log(`Tiered Discovery: Checking 10km radius...`);
+                // --- SMART DISCOVERY (BROADENED) ---
+                // We use a multi-stage approach:
+                // 1. Search by City/Area Name (Explicit match)
+                // 2. Search by Radius (Spatial match)
+                
+                console.log(`Smart Discovery: Starting search for ${location.city} / ${location.area}...`);
+                
+                // Fetch by City (if available)
+                let cityResults: any[] = [];
+                if (location.city) {
+                    cityResults = await getProducts({ city: location.city, limit: 24 });
+                }
+
+                // Fetch by Radius (10km)
+                console.log(`Smart Discovery: Checking 10km spatial radius...`);
                 let nearby = await getProducts({ 
                     lat: location.lat, 
                     lng: location.lon, 
                     radius: 10000 
                 });
                 
-                let activeRadius = 10;
+                // Combine and Deduplicate
+                const combined = [...cityResults];
+                nearby.forEach(p => {
+                    if (!combined.find(cp => cp.id === p.id)) {
+                        combined.push(p);
+                    }
+                });
 
-                // Step 2: District-wide Fallback (60km) - ONLY if 10km is empty
-                if (!nearby || nearby.length === 0) {
-                    console.log(`Tiered Discovery: Nothing in 10km. Expanding to 60km district-wide search...`);
-                    nearby = await getProducts({ 
+                let results = combined;
+                let activeRadius = 10;
+                let activeLabel = locationDisplayName;
+
+                // Stage 2: Fallback to 60km if still too few results (< 3)
+                if (results.length < 3) {
+                    console.log(`Smart Discovery: Fewer than 3 results. Expanding to 60km district-wide...`);
+                    const broader = await getProducts({ 
                         lat: location.lat, 
                         lng: location.lon, 
                         radius: 60000 
                     });
+                    
+                    broader.forEach(p => {
+                        if (!results.find(res => res.id === p.id)) {
+                            results.push(p);
+                        }
+                    });
                     activeRadius = 60;
                 }
                 
-                if (nearby && nearby.length > 0) {
-                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby in ${location.city} District (60km)`;
-                    setFilteredProducts(nearby);
+                if (results && results.length > 0) {
+                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby in ${location.city || 'your area'} (District)`;
+                    setFilteredProducts(results);
                     setNearbyLocationName(radiusLabel);
                     
                     const freshCache = {
-                        products: nearby,
+                        products: results,
                         locationName: radiusLabel,
                         coords: { lat: location.lat, lon: location.lon },
                         timestamp: Date.now()
@@ -162,9 +199,9 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                     setLastFetchCoords(freshCache.coords);
                     localStorage.setItem(DISCOVERY_CACHE_KEY, JSON.stringify(freshCache));
                 } else {
-                    // Step 3: Truly Empty (No properties in 60km)
+                    // Stage 3: Empty Search
                     setFilteredProducts([]);
-                    setNearbyLocationName(`No properties found within 60km of ${location.city}`);
+                    setNearbyLocationName(`No properties found in ${location.city || 'your area'}`);
                     localStorage.removeItem(DISCOVERY_CACHE_KEY);
                 }
                 setIsSearchingNearby(false);
