@@ -61,34 +61,47 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
 
     const router = require('next/navigation').useRouter();
 
-    // 2. Real-time Supabase Data Sync (Instant PWA Updates)
+    // 2. Real-time Supabase Data Sync (Instant Admin Approval Reflection)
     useEffect(() => {
-        // Force reload to clear stuck service worker cache (First Load only)
-        if (typeof window !== 'undefined') {
-            const hasReloaded = sessionStorage.getItem('nbf_home_fix_v1');
-            if (!hasReloaded) {
-                sessionStorage.setItem('nbf_home_fix_v1', 'true');
-                window.location.reload();
-            }
-        }
-
         const { createClient } = require('@supabase/supabase-js');
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
 
-        const channel = supabase.channel('home_properties_sync')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, () => {
-                console.log('[Real-time] Global property update detected.');
-                router.refresh(); 
+        const channel = supabase.channel('home_properties_realtime')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'properties' }, (payload) => {
+                console.log('[Real-time] Property change detected:', payload.eventType);
+                
+                // Clear local discovery cache so fresh data is fetched
+                localStorage.removeItem(DISCOVERY_CACHE_KEY);
+                
+                // Trigger Router Refresh to get fresh Server Props
+                router.refresh();
+
+                // Re-trigger location discovery if we have a location
+                if (location?.lat && location?.lon) {
+                    setLastFetchCoords(null); // This triggers the Discovery useEffect
+                } else {
+                    // Fallback: If no discovery, just update state from new props when they arrive
+                    // (Handled by the Sync Props effect below)
+                }
             })
-            .subscribe();
+            .subscribe((status) => {
+                console.log('[Real-time] Subscription status:', status);
+            });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [router]);
+    }, [router, location]);
+
+    // 3. Sync state with Server Props (Essential for router.refresh() to work)
+    useEffect(() => {
+        if (initialProducts) {
+            setFilteredProducts(initialProducts);
+        }
+    }, [initialProducts]);
 
     // 3. Smart Discovery: Auto-detect location and find nearby properties (with Throttling)
     useEffect(() => {
