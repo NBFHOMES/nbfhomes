@@ -188,7 +188,7 @@ export async function POST(request: NextRequest) {
 
         let dbQuery = supabase
             .from("properties")
-            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,built_up_area,furnishing_status,floor_number,total_floors')
+            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
             .limit(safeLimit);
 
         // Apply base filter
@@ -208,7 +208,7 @@ export async function POST(request: NextRequest) {
             // Check if the query matches a location field directly.
             const { data: strictData, error: strictError } = await supabase
                 .from("properties")
-                .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,built_up_area,furnishing_status,floor_number,total_floors')
+                .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
                 .eq('available_for_sale', true)
                 // Phase 2: Thinking (Server SQL - City, Area, Address)
                 .or(`city.ilike.%${safeQuery}%,locality.ilike.%${safeQuery}%,state.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%`)

@@ -19,7 +19,7 @@ import { UserPropertiesModal } from '@/components/admin/UserPropertiesModal';
 import UserInfoModal from '@/components/admin/UserInfoModal';
 import { getAdminProducts, getAdminStats, getAdminUsers, getSiteSettings, getUserPropertiesForAdmin, banUser, unbanUser, getInquiries, getUnreadInquiriesCount, getAdminLeads, getAllInquiries, getSupportRequests, getDashboardStats, getRecentActivity } from '@/lib/api';
 import { getOptimizedImageUrl } from '@/lib/cloudinary-utils';
-import { AdManager } from '@/components/admin/ad-manager';
+import { SmartAdManager } from '@/components/admin/SmartAdManager';
 import { InquiryModal } from '@/components/admin/InquiryModal';
 
 import { useRef } from 'react';
@@ -1420,7 +1420,7 @@ export default function AdminPage() {
                 {
                     activeTab === 'ads' && (
                         <div className="max-w-4xl mx-auto">
-                            <AdManager />
+                            <SmartAdManager />
                         </div>
                     )
                 }
@@ -1697,9 +1697,6 @@ export default function AdminPage() {
                     )
                 }
 
-                {activeTab === 'ads' && (
-                    <AdManager />
-                )}
 
                 {activeTab === 'smart-qr' && (
                     <SmartQRSection adminId={user?.id || ''} />

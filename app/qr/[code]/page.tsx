@@ -7,19 +7,29 @@ export default async function QRRedirectPage({ params }: { params: Promise<{ cod
 
     // Prefer service role key (bypasses RLS entirely).
     // Falls back to anon key — requires "Public can scan qr codes" policy in Supabase.
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        supabaseKey,
-        { auth: { persistSession: false } }
-    );
+    try {
+        console.log(`[QR Scan] Starting scan for code: ${code}`);
+        
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+        
+        if (!supabaseUrl || !supabaseKey) {
+            console.error('[QR Scan] Missing Supabase config');
+            throw new Error('Supabase configuration missing');
+        }
 
-    // Lookup QR Code — try exact match first, then case-insensitive
-    let { data: qr, error } = await supabase
-        .from('qr_codes')
-        .select('id, status, assigned_user_id, scan_count')
-        .eq('code', code)
-        .maybeSingle();
+        const supabase = createClient(supabaseUrl, supabaseKey, { auth: { persistSession: false } });
+
+        console.log(`[QR Scan] Searching for code: ${code}`);
+
+        // Lookup QR Code — try exact match first
+        let { data: qr, error } = await supabase
+            .from('qr_codes')
+            .select('id, status, assigned_user_id, scan_count')
+            .eq('code', code)
+            .maybeSingle();
+
+        console.log(`[QR Scan] Direct lookup result:`, qr, error);
 
     // Fallback: case-insensitive match (handles URL case variations)
     if (!qr && !error) {
@@ -67,21 +77,33 @@ export default async function QRRedirectPage({ params }: { params: Promise<{ cod
         );
     }
 
-    // Active — track scan count (best effort, don't block redirect)
-    if (qr.status === 'active' && qr.assigned_user_id) {
-        try {
-            await supabase.from('qr_codes').update({
-                scan_count: (qr.scan_count || 0) + 1,
-                last_scanned_at: new Date().toISOString()
-            }).eq('id', qr.id);
-        } catch (err) {
-            // Non-fatal
+        // Active — track scan count (best effort, don't block redirect)
+        if (qr.status === 'active' && qr.assigned_user_id) {
+            try {
+                await supabase.from('qr_codes').update({
+                    scan_count: (qr.scan_count || 0) + 1,
+                    last_scanned_at: new Date().toISOString()
+                }).eq('id', qr.id);
+            } catch (err) {
+                // Non-fatal
+            }
+
+            // Redirect to user's public profile with all their properties
+            redirect(`/view-profile/${qr.assigned_user_id}`);
         }
 
-        // Redirect to user's public profile with all their properties
-        redirect(`/view-profile/${qr.assigned_user_id}`);
+        // Fallback (should never reach here)
+        redirect('/');
+    } catch (err: any) {
+        console.error(`[QR Scan] Global Error:`, err);
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px', background: '#fff' }}>
+                <div style={{ fontSize: '64px', marginBottom: '16px' }}>❗</div>
+                <h1 style={{ color: '#000', fontSize: '28px', fontWeight: 'bold', marginBottom: '8px' }}>System Error</h1>
+                <p style={{ color: '#666' }}>Something went wrong while processing the scan.</p>
+                <p style={{ fontSize: '12px', color: '#999', marginTop: '24px' }}>{err.message}</p>
+                <a href="/" style={{ marginTop: '24px', padding: '12px 24px', background: '#000', color: '#fff', borderRadius: '8px', fontWeight: 'bold', textDecoration: 'none' }}>Back to Home</a>
+            </div>
+        );
     }
-
-    // Fallback (should never reach here)
-    redirect('/');
 }

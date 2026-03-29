@@ -9,7 +9,7 @@ import { useLoader } from '@/context/loader-context';
 import { toast } from 'sonner';
 import { SmartQRModal } from './SmartQRModal';
 import { Checkbox } from "@/components/ui/checkbox";
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 
 interface QRInventoryItem {
     id: string;
@@ -62,8 +62,8 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 24px Arial';
     ctx.textAlign = 'left';
-    const siteDisplay = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
-    ctx.fillText(siteDisplay, 50, 60);
+    const siteDisplay = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
+    ctx.fillText(siteDisplay.replace(/^https?:\/\//, ''), 50, 60);
 
     // NBF HOMES Button-like Badge
     ctx.fillStyle = '#000000';
@@ -73,92 +73,83 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     ctx.textAlign = 'center';
     ctx.fillText('NBF HOMES', width - 125, 57);
 
-    // --- Main Text Content (ADJUSTED FOR LARGER SIZE & SPACING) ---
+    // --- Main Text Content ---
     ctx.fillStyle = '#000000';
     ctx.textAlign = 'center';
 
     // Hindi Text 1: "हमारे यहाँ कमरे, फ्लैट और रूम"
-    ctx.font = 'bold 54px Arial';
-    ctx.fillText('"हमारे यहाँ कमरे, फ्लैट और रूम', width / 2, 180); // Move higher
+    ctx.font = 'bold 40px Arial';
+    ctx.fillText('"हमारे यहाँ कमरे, फ्लैट और रूम', width / 2, 250);
 
     // Hindi Text 2: "किराये पर उपलब्ध हैं।""
-    ctx.fillText('किराये पर उपलब्ध हैं।\"', width / 2, 265); // More gap (85px vs 60px)
+    ctx.fillText('किराये पर उपलब्ध हैं।\"', width / 2, 300);
 
-    // Instruction Text (Bigger & More Spaced)
-    ctx.font = 'bold 26px Arial';
-    ctx.fillStyle = '#444444';
-    ctx.fillText('सम्पर्क करने, फोटो(room) देखने और पूरी जानकारी', width / 2, 350); // More gap
+    // Instruction Text (Smaller)
+    ctx.font = '22px Arial';
+    ctx.fillStyle = '#555555';
+    ctx.fillText('सम्पर्क करने, फोटो(room) देखने और पूरी जानकारी', width / 2, 360);
     ctx.fillText('(Details) के लिए नीचे दिए गए QR Code को स्कैन करें।', width / 2, 390);
 
-
-    // --- QR Code with Logo ---
+    // --- QR Code ---
+    // We use a Promise to wait for image loading
     return new Promise((resolve) => {
-        const qrSize = 420; // Massive QR
-        const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10`;
+        const qrSize = 400; // Large QR
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
         
-        const qrImg = new window.Image();
-        const logoImg = new window.Image();
-        
-        qrImg.crossOrigin = "Anonymous";
-        logoImg.crossOrigin = "Anonymous";
-        
-        qrImg.src = qrUrl;
-        logoImg.src = "/icon.png";
+        // Added &ecc=H to allow logo placement without breaking QR scanning
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10&ecc=H`;
+        const img = new window.Image();
+        img.crossOrigin = "Anonymous";
+        img.src = qrUrl;
 
-        qrImg.onload = () => {
-            const qrY = 460; // QR pushed slightly lower to avoid clash with subtext
-            const qrX = (width - qrSize) / 2;
-            
-            // Draw Main QR
-            ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+        img.onload = () => {
+            const qrY = 450;
+            ctx.drawImage(img, (width - qrSize) / 2, qrY, qrSize, qrSize);
 
-            // Draw Logo in center if available
+            // Fetch and draw logo in the center
+            const logoImg = new window.Image();
+            logoImg.crossOrigin = "Anonymous";
+            logoImg.src = `${baseUrl}/icon-192x192.png`;
+
+            const finalizeCanvas = () => {
+                // Add ID Code Bottom Right corner, very small and discreet
+                ctx.fillStyle = '#bbbbbb';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'right';
+                const displayCode = code.startsWith('MDS_') ? code : `MDS_${code}`;
+                ctx.fillText(`ID: ${displayCode}`, width - 15, height - 70);
+                resolve(canvas);
+            };
+
             logoImg.onload = () => {
-                const logoSize = 100;
-                const lx = qrX + (qrSize - logoSize) / 2;
-                const ly = qrY + (qrSize - logoSize) / 2;
+                const logoSize = qrSize * 0.22; // ~88px logo
+                const centerX = (width - logoSize) / 2;
+                const centerY = qrY + (qrSize - logoSize) / 2;
                 
-                // Draw rounded background for logo to "excavate" the center
+                // Draw white background for the logo to make it stand out and not clash
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.roundRect(lx - 5, ly - 5, logoSize + 10, logoSize + 10, 15);
+                if (ctx.roundRect) {
+                    ctx.roundRect(centerX - 4, centerY - 4, logoSize + 8, logoSize + 8, 8);
+                } else {
+                    ctx.fillRect(centerX - 4, centerY - 4, logoSize + 8, logoSize + 8);
+                }
                 ctx.fill();
                 
-                ctx.drawImage(logoImg, lx, ly, logoSize, logoSize);
-
-                // Finalize Text
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 28px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('[ SCAN FOR DETAILS ]', width / 2, qrY + qrSize + 60);
-
-                // Add ID in corner
-                ctx.fillStyle = '#999999';
-                ctx.font = 'bold 18px Courier New';
-                ctx.textAlign = 'right';
-                ctx.fillText(`ID: MDS_${code.toUpperCase()}`, width - 40, height - 80);
-
-                resolve(canvas);
+                // Draw logo
+                ctx.drawImage(logoImg, centerX, centerY, logoSize, logoSize);
+                finalizeCanvas();
             };
 
-            // If logo fails, still resolve with QR
             logoImg.onerror = () => {
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 28px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('[ SCAN FOR DETAILS ]', width / 2, qrY + qrSize + 60);
-                
-                ctx.fillStyle = '#999999';
-                ctx.font = 'bold 18px Courier New';
-                ctx.textAlign = 'right';
-                ctx.fillText(`ID: MDS_${code.toUpperCase()}`, width - 40, height - 80);
-                
-                resolve(canvas);
+                console.warn("Logo failed to load for QR Code");
+                finalizeCanvas();
             };
         };
-
-        qrImg.onerror = () => resolve(null);
+        img.onerror = () => {
+            console.error("Failed to load QR image from", qrUrl);
+            resolve(null);
+        };
     });
 };
 
@@ -166,107 +157,43 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
 // --- Helper: Review Poster Generator ---
 const generateReviewPosterCanvas = async (): Promise<HTMLCanvasElement | null> => {
     const canvas = document.createElement('canvas');
-    const width = 800;
-    const height = 1100;
-    canvas.width = width;
-    canvas.height = height;
+    const size = 440;
+    const padding = 20;
+    canvas.width = size;
+    canvas.height = size + 80;
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
 
-    // Background
+    // Fill white background
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // --- Header Section ---
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, height - 60, width, 60);
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('POWERED BY NBF', 100, height - 25);
-    ctx.fillText('WWW.NBFHOMES.IN', width - 150, height - 25);
-
-    // Top Brand
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 24px Arial';
-    ctx.textAlign = 'left';
-    ctx.fillText('NBF HOMES', 50, 60);
-
-    // --- Main Text Content ---
-    ctx.fillStyle = '#000000';
-    ctx.textAlign = 'center';
-
-    // Hindi Text 1: "हमें अपनी समीक्षा दें और"
-    ctx.font = 'bold 44px Arial';
-    ctx.fillText('"हमें अपनी समीक्षा दें और', width / 2, 220);
-
-    // Hindi Text 2: "बेहतर सेवा में मदद करें"'
-    ctx.fillText('बेहतर सेवा में मदद करें\"', width / 2, 280);
-
-    // Subtext
-    ctx.font = '22px Arial';
-    ctx.fillStyle = '#555555';
-    ctx.fillText('स्कैन करके गूगल पर अपनी राय साझा करें', width / 2, 350);
-    ctx.fillText('और हमें 5-स्टार रेटिंग दें!', width / 2, 385);
-
-
-    // --- QR Code ---
     return new Promise((resolve) => {
-        const qrSize = 420;
         const googleLink = 'https://g.page/r/CfKcwrl6aAEGEAE/review';
-        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(googleLink)}&margin=10`;
-        const img = new window.Image();
-        img.crossOrigin = "Anonymous";
-        img.src = qrUrl;
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(googleLink)}&margin=10`;
+        
+        const qrImg = new window.Image();
+        qrImg.crossOrigin = "Anonymous";
+        qrImg.src = qrUrl;
 
-        img.onload = () => {
-            const qrY = 440;
-            const qrX = (width - qrSize) / 2;
-            
-            // Draw QR Background/Shadow for rounded look feel
+        qrImg.onload = () => {
+            // Draw QR code
+            ctx.drawImage(qrImg, padding, padding);
+
+            // Add text at bottom
             ctx.fillStyle = '#000000';
-            const r = 30;
-            ctx.beginPath();
-            ctx.moveTo(qrX-10+r, qrY-10);
-            ctx.arcTo(qrX+qrSize+10, qrY-10, qrX+qrSize+10, qrY+qrSize+10, r);
-            ctx.arcTo(qrX+qrSize+10, qrY+qrSize+10, qrX-10, qrY+qrSize+10, r);
-            ctx.arcTo(qrX-10, qrY+qrSize+10, qrX-10, qrY-10, r);
-            ctx.arcTo(qrX-10, qrY-10, qrX+qrSize+10, qrY-10, r);
-            ctx.closePath();
-            ctx.fill();
+            ctx.font = 'bold 18px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('SCAN TO RATE ON GOOGLE', size / 2, size + 45);
+            
+            ctx.font = '12px Arial';
+            ctx.fillStyle = '#999999';
+            ctx.fillText('Thank you for your feedback!', size / 2, size + 70);
 
-            // Draw White Box inside
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(qrX-5, qrY-5, qrSize+10, qrSize+10);
-
-            // Draw QR
-            ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
-
-            // --- Draw Logo in Middle ---
-            const logoSize = 100;
-            const logoImg = new window.Image();
-            // No crossOrigin for same-origin local assets to avoid potential dev server header issues
-            logoImg.src = "/icon.png";
-            logoImg.onload = () => {
-                // Circle backdrop for logo
-                ctx.beginPath();
-                ctx.arc(width/2, qrY + qrSize/2, logoSize/2 + 5, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                
-                ctx.drawImage(logoImg, (width - logoSize)/2, qrY + (qrSize - logoSize)/2, logoSize, logoSize);
-
-                // Footer CTA
-                ctx.fillStyle = '#000000';
-                ctx.font = 'bold 26px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('[ SCAN TO RATE ON GOOGLE ]', width / 2, qrY + qrSize + 70);
-
-                resolve(canvas);
-            };
-            logoImg.onerror = () => resolve(canvas);
+            resolve(canvas);
         };
-        img.onerror = () => resolve(null);
+
+        qrImg.onerror = () => resolve(null);
     });
 };
 
@@ -296,7 +223,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
     // Generation State
     const [isGenerating, setIsGenerating] = useState(false);
     const [genCount, setGenCount] = useState(5);
-    const [genPrefix, setGenPrefix] = useState('NBF');
+    const [genPrefix, setGenPrefix] = useState('MDS');
 
     // --- Data Fetching ---
 
@@ -391,23 +318,28 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
     };
 
     const handleDownload = async (code: string, id: string | null) => {
-        const canvas = await generatePosterCanvas(code);
-        if (!canvas) {
-            toast.error("Failed to generate Poster");
-            return;
-        }
+        try {
+            const canvas = await generatePosterCanvas(code);
+            if (!canvas) {
+                toast.error("Failed to generate Poster");
+                return;
+            }
 
-        // Trigger Download
-        const link = document.createElement('a');
-        link.download = `Poster_${code}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+            // Trigger Download
+            const link = document.createElement('a');
+            link.download = `QR_${code}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
 
-        if (id) {
-            await markQRDownloadedAction(id);
-            setQrCodes(prev => prev.map(q => q.id === id ? { ...q, is_downloaded: true } : q));
+            if (id) {
+                await markQRDownloadedAction(id);
+                setQrCodes(prev => prev.map(q => q.id === id ? { ...q, is_downloaded: true } : q));
+            }
+            toast.success("QR Card Downloaded");
+        } catch (e: any) {
+            console.error("Download Error:", e);
+            toast.error("Failed to generate Poster: " + e.message);
         }
-        toast.success("Poster Downloaded");
     };
 
     // --- Bulk Selection Handlers ---
@@ -446,6 +378,9 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
 
             for (let i = 0; i < selectedItems.length; i++) {
                 const item = selectedItems[i];
+                // Add a small delay between generations to prevent UI freezing
+                await new Promise(r => setTimeout(r, 100));
+                
                 const canvas = await generatePosterCanvas(item.code);
 
                 if (canvas) {
@@ -463,7 +398,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
 
             // Save PDF
             pdf.save(`NBF_Bulk_QRs_${new Date().toISOString().slice(0, 10)}.pdf`);
-            toast.success(`Downloaded ${processedCount} Posters as PDF!`);
+            toast.success(`Downloaded ${processedCount} QR Cards as PDF!`);
 
             // Update local state to reflect downloaded
             setQrCodes(prev => prev.map(q => selectedQrIds.has(q.id) ? { ...q, is_downloaded: true } : q));
@@ -492,10 +427,10 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-neutral-100">
                 <div>
                     <h2 className="text-2xl font-bold flex items-center gap-2 text-neutral-900">
-                        <QrCode className="w-7 h-7 text-green-600" />
-                        Smart QR Control Center
+                        <QrCode className="w-7 h-7 text-blue-600" />
+                        QR Management
                     </h2>
-                    <p className="text-neutral-500 text-sm mt-1">Manage Digital IDs & Physical Inventory</p>
+                    <p className="text-neutral-500 text-sm mt-1">Manage and Print QR Codes</p>
                 </div>
 
                 <div className="flex bg-neutral-100 p-1 rounded-xl">

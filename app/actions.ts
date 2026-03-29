@@ -482,7 +482,7 @@ export async function deleteAdAction(adminUserId: string) {
 }
 
 // Ad Actions
-export async function getAdSettingsAction() {
+export async function getAdSettingsAction(retries = 2): Promise<{ success: boolean; data?: any; error?: string }> {
     try {
         const supabase = await getSupabaseClient(); // Public read access
         const { data, error } = await supabase.from('ads').select('*').limit(1).single();
@@ -491,12 +491,23 @@ export async function getAdSettingsAction() {
             if (error.code === 'PGRST116') {
                 return { success: true, data: null };
             }
+            // If it's a fetch error or connection reset, retry
+            if (retries > 0 && (error.message?.includes('fetch failed') || error.message?.includes('ECONNRESET'))) {
+                console.warn(`[getAdSettingsAction] Fetch failed, retrying... (${retries} left)`);
+                await new Promise(r => setTimeout(r, 500)); // 0.5s delay
+                return getAdSettingsAction(retries - 1);
+            }
             console.error('Error fetching ad settings:', JSON.stringify(error, null, 2));
             return { success: false, error: error.message };
         }
         return { success: true, data };
     } catch (error: any) {
         // Handle fetch/network errors (ECONNRESET etc)
+        if (retries > 0 && (error.message?.includes('fetch failed') || error.message?.includes('ECONNRESET'))) {
+            console.warn(`[getAdSettingsAction] Exception fetch failed, retrying... (${retries} left)`);
+            await new Promise(r => setTimeout(r, 500));
+            return getAdSettingsAction(retries - 1);
+        }
         console.error('Exception in getAdSettingsAction:', error);
         return { success: false, error: error.message || 'Network error' };
     }
@@ -1074,5 +1085,103 @@ export async function getReviewsAdminAction(page: number = 1, limit: number = 50
         return { success: true, reviews: data || [], total: count || 0 };
     } catch (error: any) {
         return { success: false, error: error.message, reviews: [] };
+    }
+}
+
+// -----------------------------------------------------
+// SMART ADVERTISEMENTS (ADS) - SLIDER FOR HOME PAGE
+// -----------------------------------------------------
+
+export async function getAdvertisementsAction() {
+    try {
+        const supabase = await getSupabaseClient();
+        const { data, error } = await supabase
+            .from('advertisements')
+            .select('*')
+            .order('order_index', { ascending: true });
+
+        if (error) throw error;
+        return { success: true, data };
+    } catch (error: any) {
+        console.error('getAdvertisementsAction err:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function saveAdvertisementAction(ad: any) {
+    try {
+        const isAdmin = await checkAdminStatus();
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        
+        let query;
+        if (ad.id) {
+            query = supabase.from('advertisements').update({
+                title: ad.title,
+                desktop_media_url: ad.desktop_media_url,
+                desktop_media_type: ad.desktop_media_type,
+                mobile_media_url: ad.mobile_media_url,
+                mobile_media_type: ad.mobile_media_type,
+                action_url: ad.action_url,
+                is_active: ad.is_active,
+                order_index: ad.order_index,
+                updated_at: new Date().toISOString()
+            }).eq('id', ad.id);
+        } else {
+            query = supabase.from('advertisements').insert({
+                title: ad.title,
+                desktop_media_url: ad.desktop_media_url,
+                desktop_media_type: ad.desktop_media_type,
+                mobile_media_url: ad.mobile_media_url,
+                mobile_media_type: ad.mobile_media_type,
+                action_url: ad.action_url,
+                is_active: ad.is_active,
+                order_index: ad.order_index || 0
+            });
+        }
+
+        const { error } = await query;
+        if (error) throw error;
+        
+        revalidatePath('/');
+        return { success: true };
+    } catch (error: any) {
+        console.error('saveAdvertisementAction err:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteAdvertisementAction(id: string) {
+    try {
+        const isAdmin = await checkAdminStatus();
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        const { error } = await supabase.from('advertisements').delete().eq('id', id);
+        
+        if (error) throw error;
+        revalidatePath('/');
+        return { success: true };
+    } catch (error: any) {
+        console.error('deleteAdvertisementAction err:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function updateAdOrderAction(id: string, order_index: number) {
+    try {
+        const isAdmin = await checkAdminStatus();
+        if (!isAdmin) return { success: false, error: 'Unauthorized' };
+
+        const supabase = await getSupabaseClient();
+        const { error } = await supabase.from('advertisements').update({ order_index }).eq('id', id);
+        
+        if (error) throw error;
+        revalidatePath('/');
+        return { success: true };
+    } catch (error: any) {
+        console.error('updateAdOrderAction err:', error);
+        return { success: false, error: error.message };
     }
 }

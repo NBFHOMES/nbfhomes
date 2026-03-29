@@ -59,9 +59,14 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
                     handleScanSuccess,
                     () => { } // Error on frame-by-frame is ignored
                 );
-            } catch (envError) {
-                console.warn("Back camera failed, trying fallback...", envError);
+            } catch (envError: any) {
+                console.warn("Back camera failed, trying fallback...", envError?.message || envError);
                 
+                // If permission was explicitly denied or dismissed, do not attempt to prompt again
+                if (envError?.name === 'NotAllowedError' || envError?.message?.includes('Permission') || envError?.message?.includes('dismissed')) {
+                    throw envError;
+                }
+
                 // Attempt 2: Try any available camera
                 const cameras = await Html5Qrcode.getCameras();
                 if (cameras && cameras.length > 0) {
@@ -75,11 +80,11 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
                 }
             }
         } catch (err: any) {
-            console.error("Scanner error:", err);
+            console.warn("Scanner error:", err?.message || err);
 
             if (activeTab !== 'scan') return;
 
-            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message?.includes('Permission denied')) {
+            if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' || err.message?.includes('Permission') || err.message?.includes('dismissed')) {
                 setScanError("Permission Denied: Please enable camera access in your browser settings.");
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                 setScanError("Hardware Error: No camera detected on this device.");
@@ -242,11 +247,11 @@ export function SmartQRModal({ isOpen, onClose, user, adminId }: SmartQRModalPro
                                     <input
                                         value={manualId}
                                         onChange={(e) => setManualId(e.target.value)}
-                                        placeholder="nbf_Mandsaur_XYZ123"
+                                        placeholder="MDS_XYZ123"
                                         className="w-full p-4 text-center text-lg font-mono font-bold border-2 border-neutral-200 rounded-xl focus:border-black outline-none"
                                         autoFocus
                                     />
-                                    <p className="text-[10px] text-neutral-400 mt-2 text-center">Must contain underscore (e.g. MDS_123)</p>
+                                    <p className="text-[10px] text-neutral-400 mt-2 text-center">Enter the ID exactly as printed (e.g. MDS_123)</p>
                                 </div>
                                 <button
                                     type="submit"

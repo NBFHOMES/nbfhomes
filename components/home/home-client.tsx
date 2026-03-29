@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Hero } from '@/components/hero';
 import { Product, AdSettings } from '@/lib/types';
 import { LatestProductCard } from '@/components/products/latest-product-card';
-import { AdSection } from '@/components/home/ad-section';
+import { SmartAdsSlider } from '@/components/home/SmartAdsSlider';
 import Link from 'next/link';
 import { AutoScroll } from '@/components/ui/auto-scroll';
 import { MessageCircle } from 'lucide-react';
@@ -18,13 +18,13 @@ import { MapPin, Navigation, Loader2 } from 'lucide-react';
 
 interface HomeClientProps {
     initialProducts: Product[];
-    adSettings?: AdSettings | null;
+    ads?: any[];
 }
 
 const DISCOVERY_CACHE_KEY = 'nbf_discovery_cache_v1';
 const DISCOVERY_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
-export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
+export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
     const { profile, isLoading } = useAuth();
     
     // --- HYDRATION-SAFE INITIALIZATION ---
@@ -141,52 +141,28 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 // 2. Search by Radius (Spatial match)
                 
                 console.log(`Smart Discovery: Starting search for ${location.city} / ${location.area}...`);
-                
-                // Fetch by City (if available)
-                let cityResults: any[] = [];
-                if (location.city) {
-                    cityResults = await getProducts({ city: location.city, limit: 24 });
-                }
-
-                // Fetch by Radius (10km)
-                console.log(`Smart Discovery: Checking 10km spatial radius...`);
-                let nearby = await getProducts({ 
-                    lat: location.lat, 
-                    lng: location.lon, 
-                    radius: 10000 
-                });
-                
-                // Combine and Deduplicate
-                const combined = [...cityResults];
-                nearby.forEach(p => {
-                    if (!combined.find(cp => cp.id === p.id)) {
-                        combined.push(p);
-                    }
-                });
-
-                let results = combined;
+                // Progressive Radius Search: 10km -> 20km -> 30km -> 50km -> 100km
+                const radiuses = [10, 20, 30, 50, 100];
+                let results: any[] = [];
                 let activeRadius = 10;
-                let activeLabel = locationDisplayName;
 
-                // Stage 2: Fallback to 60km if still too few results (< 3)
-                if (results.length < 3) {
-                    console.log(`Smart Discovery: Fewer than 3 results. Expanding to 60km district-wide...`);
-                    const broader = await getProducts({ 
+                for (const r of radiuses) {
+                    activeRadius = r;
+                    console.log(`Smart Discovery: Checking ${r}km spatial radius...`);
+                    const fetchResults = await getProducts({ 
                         lat: location.lat, 
                         lng: location.lon, 
-                        radius: 60000 
+                        radius: r * 1000 
                     });
                     
-                    broader.forEach(p => {
-                        if (!results.find(res => res.id === p.id)) {
-                            results.push(p);
-                        }
-                    });
-                    activeRadius = 60;
+                    if (fetchResults && fetchResults.length > 0) {
+                        results = fetchResults;
+                        break; // Stop at the first radius that yields properties
+                    }
                 }
-                
-                if (results && results.length > 0) {
-                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby in ${location.city || 'your area'} (District)`;
+
+                if (results.length > 0) {
+                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby within ${activeRadius}km`;
                     setFilteredProducts(results);
                     setNearbyLocationName(radiusLabel);
                     
@@ -199,9 +175,9 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                     setLastFetchCoords(freshCache.coords);
                     localStorage.setItem(DISCOVERY_CACHE_KEY, JSON.stringify(freshCache));
                 } else {
-                    // Stage 3: Empty Search
+                    // Stage 3: Empty Search (Nothing found even at 100km)
                     setFilteredProducts([]);
-                    setNearbyLocationName(`No properties found in ${location.city || 'your area'}`);
+                    setNearbyLocationName(`No properties available in your area (${location.city || 'Nearby'})`);
                     localStorage.removeItem(DISCOVERY_CACHE_KEY);
                 }
                 setIsSearchingNearby(false);
@@ -414,13 +390,12 @@ export function HomeClient({ initialProducts, adSettings }: HomeClientProps) {
                 </div>
             </section>
 
-            {/* Conditional Display: Ad Section OR Trusted By Section */}
-            {adSettings?.is_active ? (
-                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <AdSection ad={adSettings} />
+            {/* Smart Ads Slider OR Social Proof (Conditional) */}
+            {ads.length > 0 ? (
+                <div className="w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <SmartAdsSlider ads={ads} />
                 </div>
             ) : (
-                /* Social Proof / Trusted Partners - Only shown when no active ad */
                 <div className="w-full border-y border-neutral-100 bg-neutral-50/30 animate-in fade-in slide-in-from-bottom-4 duration-500">
                     <div className="max-w-[1920px] mx-auto px-6 md:px-12 py-10">
                         <p className="text-center text-sm font-medium text-neutral-400 uppercase tracking-widest mb-8">Trusted by Students & Professionals</p>

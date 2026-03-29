@@ -15,20 +15,28 @@ export interface GeoLocation {
  * Reverse geocode coordinates to a city/area name
  */
 export async function reverseGeocode(lat: number, lon: number): Promise<GeoLocation | null> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
   try {
     // Zoom 18 for street-level precision
     const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'NBFHomes-App' },
       // Use no-store for geocoding to ensure accuracy when user moves
-      cache: 'no-store'
+      cache: 'no-store',
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (!res.ok) return null;
     const data = await res.json();
     
     // Extract city or most relevant area name
     const address = data.address;
+    if (!address) return null;
+
     const city = address.city || address.town || address.village || address.suburb || address.county;
     const area = address.suburb || address.neighbourhood || address.residential || address['sub-district'] || address.city_district;
     
@@ -40,8 +48,13 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeoLocat
       name: area || city,
       display_name: data.display_name
     };
-  } catch (error) {
-    console.error('Reverse Geocoding Error:', error);
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.warn('Geocoding request timed out');
+    } else {
+      console.error('Reverse Geocoding Error:', error.message);
+    }
     return null;
   }
 }
