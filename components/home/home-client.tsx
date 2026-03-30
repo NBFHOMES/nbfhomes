@@ -141,28 +141,16 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
                 // 2. Search by Radius (Spatial match)
                 
                 console.log(`Smart Discovery: Starting search for ${location.city} / ${location.area}...`);
-                // Progressive Radius Search: 10km -> 20km -> 30km -> 40km -> 50km -> 60km
-                const radiuses = [10, 20, 30, 40, 50, 60];
-                let results: any[] = [];
-                let activeRadius = 10;
+                // Use a single query for up to 60km to prevent ECONNRESET from multiple API calls
+                console.log(`Smart Discovery: Checking up to 60km spatial radius...`);
+                let results = await getProducts({ 
+                    lat: location.lat, 
+                    lng: location.lon, 
+                    radius: 60000 
+                });
 
-                for (const r of radiuses) {
-                    activeRadius = r;
-                    console.log(`Smart Discovery: Checking ${r}km spatial radius...`);
-                    const fetchResults = await getProducts({ 
-                        lat: location.lat, 
-                        lng: location.lon, 
-                        radius: r * 1000 
-                    });
-                    
-                    if (fetchResults && fetchResults.length > 0) {
-                        results = fetchResults;
-                        break; // Stop at the first radius that yields properties
-                    }
-                }
-
-                if (results.length > 0) {
-                    const radiusLabel = activeRadius === 10 ? locationDisplayName : `Nearby within ${activeRadius}km`;
+                if (results && results.length > 0) {
+                    const radiusLabel = locationDisplayName ? `Nearby ${locationDisplayName}` : `Nearby`;
                     setFilteredProducts(results);
                     setNearbyLocationName(radiusLabel);
                     

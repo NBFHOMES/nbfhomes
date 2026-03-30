@@ -64,7 +64,7 @@ function PostPropertyContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const editId = searchParams.get('edit');
-    const { user, session, isLoading: authLoading } = useAuth();
+    const { user, session, profile, isLoading: authLoading } = useAuth();
     const { showLoader, hideLoader } = useLoader();
 
     // Form States
@@ -89,6 +89,9 @@ function PostPropertyContent() {
 
     // Interactive Map State
     const [showMapPicker, setShowMapPicker] = useState(false);
+    
+    // Custom Amenities State
+    const [customAmenityInput, setCustomAmenityInput] = useState('');
 
     const LocationPicker = useMemo(() => dynamic(() => import('@/components/ui/location-picker'), {
         ssr: false,
@@ -137,6 +140,30 @@ function PostPropertyContent() {
             loadProperty(editId);
         }
     }, [editId]);
+
+    // Pre-fill primary contact from user profile
+    useEffect(() => {
+        if (!isEditMode && profile?.contact_number && !formData.contactNumber) {
+            setFormData(prev => ({ ...prev, contactNumber: profile.contact_number || '' }));
+        }
+    }, [profile, isEditMode]);
+
+    const handleAddCustomAmenity = () => {
+        if (!customAmenityInput.trim()) return;
+        if (formData.amenities.length >= 10) {
+            toast.error("You can add a maximum of 10 amenities.");
+            return;
+        }
+        if (formData.amenities.includes(customAmenityInput.trim())) {
+            toast.error("This amenity is already added.");
+            return;
+        }
+        setFormData(prev => ({
+            ...prev,
+            amenities: [...prev.amenities, customAmenityInput.trim()]
+        }));
+        setCustomAmenityInput('');
+    };
 
     const fetchIndianCities = async () => {
         try {
@@ -649,97 +676,8 @@ function PostPropertyContent() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">State</label>
-                                    <select
-                                        name="state"
-                                        value={formData.state}
-                                        onChange={handleInputChange}
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    >
-                                        <option value="">Select State</option>
-                                        {INDIAN_STATES.map(state => (
-                                            <option key={state} value={state}>{state}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                {/* City & Suggestions */}
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">City</label>
-                                    <input
-                                        type="text"
-                                        name="city"
-                                        value={formData.city}
-                                        onChange={handleInputChange}
-                                        list="city-suggestions"
-                                        placeholder="Enter city or select from list"
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    />
-                                    <datalist id="city-suggestions">
-                                        {POPULAR_LOCATIONS.map((loc) => (
-                                            <option key={loc} value={loc} />
-                                        ))}
-                                    </datalist>
-                                </div>
-
-                                {/* Pincode - Mandatory for Map Precision */}
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Pincode *</label>
-                                    <input
-                                        type="text"
-                                        name="pincode"
-                                        value={formData.pincode}
-                                        onChange={handleInputChange}
-                                        maxLength={6}
-                                        placeholder="e.g. 458001"
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    />
-                                    <p className="text-[10px] text-neutral-400 mt-1">Required for map location</p>
-                                </div>
-
-                                {/* Built-up Area */}
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Built-up Area (sq.ft)</label>
-                                    <input
-                                        type="number"
-                                        name="builtUpArea"
-                                        value={formData.builtUpArea}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. 1200"
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Floor Info */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Floor No.</label>
-                                    <input
-                                        type="number"
-                                        name="floorNumber"
-                                        value={formData.floorNumber}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. 2"
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Total Floors</label>
-                                    <input
-                                        type="number"
-                                        name="totalFloors"
-                                        value={formData.totalFloors}
-                                        onChange={handleInputChange}
-                                        placeholder="e.g. 5"
-                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
-                                    />
-                                </div>
-                            </div>
-
                             {/* Location Section */}
-                            <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200">
+                            <div className="bg-neutral-50 p-4 rounded-xl border border-neutral-200 mb-6">
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Address / Area</label>
                                 <input
                                     type="text"
@@ -811,7 +749,8 @@ function PostPropertyContent() {
                                                             address: data.address || prev.address,
                                                             city: data.city || prev.city,
                                                             state: data.state || prev.state,
-                                                            locality: data.locality || prev.locality
+                                                            locality: data.locality || prev.locality,
+                                                            pincode: data.pincode || prev.pincode
                                                         }));
                                                         setDetectedCoords({ lat: data.lat, lng: data.lng });
                                                         setIsMapVerified(true); // Mark as verified
@@ -907,6 +846,97 @@ function PostPropertyContent() {
                                     </div>
                                 )}
                             </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">State</label>
+                                    <select
+                                        name="state"
+                                        value={formData.state}
+                                        onChange={handleInputChange}
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    >
+                                        <option value="">Select State</option>
+                                        {INDIAN_STATES.map(state => (
+                                            <option key={state} value={state}>{state}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                {/* City & Suggestions */}
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">City</label>
+                                    <input
+                                        type="text"
+                                        name="city"
+                                        value={formData.city}
+                                        onChange={handleInputChange}
+                                        list="city-suggestions"
+                                        placeholder="Enter city or select from list"
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    />
+                                    <datalist id="city-suggestions">
+                                        {POPULAR_LOCATIONS.map((loc) => (
+                                            <option key={loc} value={loc} />
+                                        ))}
+                                    </datalist>
+                                </div>
+
+                                {/* Pincode - Mandatory for Map Precision */}
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Pincode *</label>
+                                    <input
+                                        type="text"
+                                        name="pincode"
+                                        value={formData.pincode}
+                                        onChange={handleInputChange}
+                                        maxLength={6}
+                                        placeholder="e.g. 458001"
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    />
+                                    <p className="text-[10px] text-neutral-400 mt-1">Required for map location</p>
+                                </div>
+
+                                {/* Built-up Area */}
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Built-up Area (sq.ft)</label>
+                                    <input
+                                        type="number"
+                                        name="builtUpArea"
+                                        value={formData.builtUpArea}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. 1200"
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Floor Info */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Floor No.</label>
+                                    <input
+                                        type="number"
+                                        name="floorNumber"
+                                        value={formData.floorNumber}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. 2"
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-neutral-700 mb-1">Total Floors</label>
+                                    <input
+                                        type="number"
+                                        name="totalFloors"
+                                        value={formData.totalFloors}
+                                        onChange={handleInputChange}
+                                        placeholder="e.g. 5"
+                                        className="w-full px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                    />
+                                </div>
+                            </div>
+
+
 
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Description</label>
@@ -1042,7 +1072,41 @@ function PostPropertyContent() {
                                             {label}
                                         </button>
                                     ))}
+                                    {/* Render Custom Amenities */}
+                                    {formData.amenities.filter(a => !AMENITIES_LIST.some( predefined => predefined.id === a)).map((customAmenity) => (
+                                        <button
+                                            key={customAmenity}
+                                            type="button"
+                                            onClick={() => toggleAmenity(customAmenity)}
+                                            className="flex items-center gap-3 p-3 rounded-xl border transition-all text-sm bg-neutral-900 text-white border-neutral-900 ring-2 ring-neutral-900 ring-offset-2"
+                                            title="Click to remove"
+                                        >
+                                            <span className="w-4 h-4 flex items-center justify-center font-bold">✓</span>
+                                            {customAmenity}
+                                        </button>
+                                    ))}
                                 </div>
+
+                                {/* Custom Amenity Input */}
+                                <div className="mt-4 flex flex-col sm:flex-row gap-2 w-full sm:w-2/3">
+                                    <input
+                                        type="text"
+                                        value={customAmenityInput}
+                                        onChange={(e) => setCustomAmenityInput(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCustomAmenity(); } }}
+                                        placeholder="Add custom amenity (e.g. GYM)"
+                                        className="flex-1 px-4 py-3 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-black outline-none"
+                                        maxLength={30}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAddCustomAmenity}
+                                        className="px-6 py-3 bg-neutral-100 border border-neutral-300 text-neutral-700 font-medium rounded-lg hover:bg-neutral-200 transition-colors whitespace-nowrap"
+                                    >
+                                        + Add
+                                    </button>
+                                </div>
+                                <p className="text-[10px] text-neutral-400 mt-2">Maximum 10 amenities allowed. Click an active amenity to remove it.</p>
                             </div>
                         </div>
                     )}

@@ -95,7 +95,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
     return new Promise((resolve) => {
         const qrSize = 400; // Large QR
         const baseUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
-        
+
         // Added &ecc=H to allow logo placement without breaking QR scanning
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${qrSize}x${qrSize}&data=${encodeURIComponent(`${baseUrl}/qr/${code}`)}&margin=10&ecc=H`;
         const img = new window.Image();
@@ -125,7 +125,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
                 const logoSize = qrSize * 0.22; // ~88px logo
                 const centerX = (width - logoSize) / 2;
                 const centerY = qrY + (qrSize - logoSize) / 2;
-                
+
                 // Draw white background for the logo to make it stand out and not clash
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
@@ -135,7 +135,7 @@ const generatePosterCanvas = async (code: string): Promise<HTMLCanvasElement | n
                     ctx.fillRect(centerX - 4, centerY - 4, logoSize + 8, logoSize + 8);
                 }
                 ctx.fill();
-                
+
                 // Draw logo
                 ctx.drawImage(logoImg, centerX, centerY, logoSize, logoSize);
                 finalizeCanvas();
@@ -171,7 +171,7 @@ const generateReviewPosterCanvas = async (): Promise<HTMLCanvasElement | null> =
     return new Promise((resolve) => {
         const googleLink = 'https://g.page/r/CfKcwrl6aAEGEAE/review';
         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=${size - 2 * padding}x${size - 2 * padding}&data=${encodeURIComponent(googleLink)}&margin=10`;
-        
+
         const qrImg = new window.Image();
         qrImg.crossOrigin = "Anonymous";
         qrImg.src = qrUrl;
@@ -185,7 +185,7 @@ const generateReviewPosterCanvas = async (): Promise<HTMLCanvasElement | null> =
             ctx.font = 'bold 18px Arial';
             ctx.textAlign = 'center';
             ctx.fillText('SCAN TO RATE ON GOOGLE', size / 2, size + 45);
-            
+
             ctx.font = '12px Arial';
             ctx.fillStyle = '#999999';
             ctx.fillText('Thank you for your feedback!', size / 2, size + 70);
@@ -380,7 +380,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                 const item = selectedItems[i];
                 // Add a small delay between generations to prevent UI freezing
                 await new Promise(r => setTimeout(r, 100));
-                
+
                 const canvas = await generatePosterCanvas(item.code);
 
                 if (canvas) {
@@ -712,19 +712,19 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                             <h3 className="text-xl font-bold">Google Review Poster</h3>
                             <p className="text-neutral-400 text-xs mt-1">Ready to Print (A4 Format)</p>
                         </div>
-                        
+
                         {/* Canvas Preview Simulation */}
                         <div className="p-10 flex flex-col items-center gap-8 bg-neutral-50">
                             <div className="w-full aspect-[1/1.414] bg-white shadow-inner border border-neutral-200 rounded-lg flex flex-col items-center p-8 overflow-hidden relative">
                                 {/* Simulated Poster Content */}
                                 <div className="text-2xl font-bold mb-4">NBF HOMES</div>
                                 <div className="text-center font-bold text-xl mb-4 px-4 leading-tight">
-                                    "हमें अपनी समीक्षा दें और <br/> बेहतर सेवा में मदद करें"
+                                    &quot;हमें अपनी समीक्षा दें और <br /> बेहतर सेवा में मदद करें&quot;
                                 </div>
                                 <div className="text-center text-xs text-neutral-500 mb-8 font-medium">
-                                    स्कैन करके गूगल पर अपनी राय साझा करें <br/> और 5-स्टार रेटिंग दें!
+                                    स्कैन करके गूगल पर अपनी राय साझा करें <br /> और 5-स्टार रेटिंग दें!
                                 </div>
-                                
+
                                 {/* The QR Symbol */}
                                 <div className="relative group">
                                     <div className="w-48 h-48 border-4 border-black rounded-3xl p-2 flex items-center justify-center bg-white shadow-xl">
@@ -739,7 +739,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                                         [ SCAN TO RATE ON GOOGLE ]
                                     </div>
                                 </div>
-                                
+
                                 <div className="absolute bottom-6 left-0 right-0 flex justify-between px-8">
                                     <span className="text-[10px] font-bold">WWW.NBFHOMES.IN</span>
                                     <span className="text-[10px] font-bold">POWERED BY NBF</span>
@@ -771,7 +771,7 @@ export function SmartQRSection({ adminId }: { adminId: string }) {
                                     <Download className="w-5 h-5" />
                                     Download high-quality Poster (PNG)
                                 </button>
-                                
+
                                 <p className="text-center text-[10px] text-neutral-400">
                                     Points to: https://g.page/r/CfKcwrl6aAEGEAE/review
                                 </p>

@@ -39,6 +39,7 @@ interface LocationPickerProps {
         city?: string;
         state?: string;
         locality?: string;
+        pincode?: string;
     }) => void;
     onClose: () => void;
 }
@@ -237,6 +238,7 @@ export default function LocationPicker({
                     const city = addr?.city || addr?.town || addr?.village || '';
                     const state = addr?.state || '';
                     const locality = addr?.suburb || addr?.neighbourhood || '';
+                    const pincode = addr?.postcode || '';
 
                     setAddress(formattedAddress);
                     setSelectedData({
@@ -245,7 +247,8 @@ export default function LocationPicker({
                         address: formattedAddress,
                         city,
                         state,
-                        locality
+                        locality,
+                        pincode
                     });
                 } else {
                     setAddress("Location details not found");
