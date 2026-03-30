@@ -69,6 +69,17 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: '(?<host>.*nbfhomes\\.com)',
+          },
+        ],
+        destination: 'https://www.nbfhomes.in/:path*',
+        permanent: true,
+      },
+      {
         source: '/shop',
         destination: '/properties',
         permanent: true,

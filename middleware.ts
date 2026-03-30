@@ -34,7 +34,7 @@ export async function middleware(request: NextRequest) {
         {
             cookieOptions: {
                 name: 'nbf_v5_final',
-                domain: request.nextUrl.hostname === 'localhost' ? undefined : '.nbfhomes.in',
+                domain: process.env.NODE_ENV === 'production' ? '.nbfhomes.in' : undefined,
                 path: '/',
                 sameSite: 'lax',
                 secure: request.nextUrl.protocol === 'https:',
@@ -59,7 +59,7 @@ export async function middleware(request: NextRequest) {
                     cookiesToSet.forEach(({ name, value, options }) => {
                         const secureOptions = {
                             ...options,
-                            domain: request.nextUrl.hostname === 'localhost' ? undefined : '.nbfhomes.in',
+                            domain: process.env.NODE_ENV === 'production' ? '.nbfhomes.in' : undefined,
                             path: '/',
                             secure: request.nextUrl.protocol === 'https:',
                             sameSite: 'lax' as const,

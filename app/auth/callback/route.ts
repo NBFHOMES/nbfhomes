@@ -44,9 +44,7 @@ export async function GET(request: Request) {
         const { error } = await supabase.auth.exchangeCodeForSession(code)
 
         if (!error) {
-            // Fix: Respect localhost origin for development to avoid redirecting to production
-            const isLocal = origin.includes('localhost') || origin.includes('127.0.0.1');
-            const targetBase = isLocal ? origin : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in');
+            const targetBase = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || 'https://www.nbfhomes.in';
 
             // Default to / if no specific next path is provided
             const targetPath = (next === '/' || !next) ? '/' : next;

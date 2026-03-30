@@ -146,12 +146,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             showLoader();
 
             // Robust URL construction
-            // Prioritize window.location.origin to ensure localhost works correctly during dev
-            let siteUrl = window.location.origin;
+            // Use NEXTAUTH_URL or NEXT_PUBLIC_SITE_URL to avoid localhost hardcoding in production
+            let siteUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
 
-            // Fallback to env var if window is undefined (SSR - though this function is client-side)
-            if (!siteUrl || siteUrl === 'null') {
-                siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
+            // Fallback to empty if still missing
+            if (siteUrl === 'null') {
+                siteUrl = '';
             }
 
             // Ensure protocol
