@@ -160,12 +160,21 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
   // Filter Active Amenities for display
   const activeAmenities = ALL_AMENITIES.filter(item => hasAmenity(item.id));
 
-  // Map Generation
-  // Address is roughly taken from Tags (Area, City)
-  const addressString = [product.address, product.locality, product.city, product.state].filter(Boolean).join(', ');
-  const addressQuery = encodeURIComponent(addressString || `${product.tags?.[2] || ''}, ${product.tags?.[1] || ''}`);
-  const mapEmbedUrl = `https://maps.google.com/maps?q=${addressQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
-  const directionsUrl = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
+  // Map Generation: 100% Exact Pinpoint using Coordinates (if available)
+  let mapEmbedUrl = '';
+  let directionsUrl = '';
+  
+  if (product.latitude && product.longitude) {
+    // Priority: Exact GPS coordinates
+    mapEmbedUrl = `https://maps.google.com/maps?q=${product.latitude},${product.longitude}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+    directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${product.latitude},${product.longitude}`;
+  } else {
+    // Fallback: Address String Matching
+    const addressString = [product.address, product.locality, product.city, product.state].filter(Boolean).join(', ');
+    const addressQuery = encodeURIComponent(addressString || `${product.tags?.[2] || ''}, ${product.tags?.[1] || ''}`);
+    mapEmbedUrl = `https://maps.google.com/maps?q=${addressQuery}&t=&z=15&ie=UTF8&iwloc=&output=embed`;
+    directionsUrl = `https://www.google.com/maps/search/?api=1&query=${addressQuery}`;
+  }
 
   const rawDescription = product.descriptionHtml || product.description || '';
   let mainDescription = rawDescription;

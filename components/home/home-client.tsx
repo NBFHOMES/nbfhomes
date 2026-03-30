@@ -141,8 +141,8 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
                 // 2. Search by Radius (Spatial match)
                 
                 console.log(`Smart Discovery: Starting search for ${location.city} / ${location.area}...`);
-                // Progressive Radius Search: 10km -> 20km -> 30km -> 50km -> 100km
-                const radiuses = [10, 20, 30, 50, 100];
+                // Progressive Radius Search: 10km -> 20km -> 30km -> 40km -> 50km -> 60km
+                const radiuses = [10, 20, 30, 40, 50, 60];
                 let results: any[] = [];
                 let activeRadius = 10;
 

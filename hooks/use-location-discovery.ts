@@ -33,17 +33,21 @@ export function useLocationDiscovery() {
   useEffect(() => {
     if (typeof window === 'undefined' || permissionState !== 'granted') return;
 
-    let watchId: number;
-
-    const startWatching = (highAccuracy: boolean) => {
-      watchId = navigator.geolocation.watchPosition(
+    // Use getCurrentPosition instead of watchPosition to prevent endless flickering
+    const fetchInitialPosition = (highAccuracy: boolean) => {
+      navigator.geolocation.getCurrentPosition(
         async (position) => {
           const { latitude: lat, longitude: lon } = position.coords;
+          
+          // Check if we already have this exact location cached to save API calls
           const stored = localStorage.getItem(LOCATION_STORAGE_KEY);
           if (stored) {
             const lastLoc = JSON.parse(stored) as GeoLocation;
             const distance = calculateDistance(lat, lon, lastLoc.lat, lastLoc.lon);
-            if (distance < 0.01) return; // 10 meter threshold
+            if (distance < 0.05) { // 50 meter threshold to prevent unnecessary geocoding
+              setLocation(lastLoc);
+              return; 
+            }
           }
 
           const geoData = await reverseGeocode(lat, lon);
@@ -53,20 +57,21 @@ export function useLocationDiscovery() {
           }
         },
         (err) => {
-          console.error(`Geolocation watch error (highAccuracy=${highAccuracy}):`, err);
+          console.error(`Geolocation error (highAccuracy=${highAccuracy}):`, err);
           if (highAccuracy && (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE)) {
-            navigator.geolocation.clearWatch(watchId);
-            startWatching(false); // Fallback to low accuracy
+            fetchInitialPosition(false); // Fallback to low accuracy
           } else {
             setError(err.message);
           }
         },
-        { enableHighAccuracy: highAccuracy, timeout: highAccuracy ? 35000 : 15000, maximumAge: 0 }
+        { enableHighAccuracy: highAccuracy, timeout: highAccuracy ? 35000 : 15000, maximumAge: 60000 }
       );
     };
 
-    startWatching(true);
-    return () => navigator.geolocation.clearWatch(watchId);
+    // Only run this once when permission is granted
+    fetchInitialPosition(true);
+    
+    // No cleanup needed for getCurrentPosition (unlike watchPosition)
   }, [permissionState]);
 
   const updateLocation = useCallback(async () => {
