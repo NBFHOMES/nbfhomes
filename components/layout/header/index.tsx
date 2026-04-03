@@ -121,13 +121,27 @@ export function Header({ collections }: HeaderProps) {
               </li>
 
               <li>
-                <Link
-                  href="/post-property"
-                  className="block px-6 py-2.5 text-xs font-bold tracking-widest uppercase rounded-full transition-all duration-300 bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg ml-4 hover:shadow-xl hover:scale-105 animate-pulse"
-                  prefetch
-                >
-                  Post Property
-                </Link>
+                {/* Post Property button with FREE badge */}
+                <div className="relative ml-3">
+                  {/* FREE badge */}
+                  <span className="absolute -top-2.5 -right-2 z-10 bg-amber-400 text-[9px] font-black text-black px-1.5 py-0.5 rounded-full shadow-sm tracking-wider uppercase">FREE</span>
+                  {user ? (
+                    <Link
+                      href="/post-property"
+                      className="block px-5 py-2 text-xs font-black tracking-widest uppercase rounded-full bg-[#e8202a] text-white shadow-md hover:bg-red-700 hover:shadow-lg transition-all duration-200 hover:scale-105"
+                      prefetch
+                    >
+                      Post Property
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className="block px-5 py-2 text-xs font-black tracking-widest uppercase rounded-full bg-[#e8202a] text-white shadow-md hover:bg-red-700 hover:shadow-lg transition-all duration-200 hover:scale-105"
+                    >
+                      Post Property
+                    </button>
+                  )}
+                </div>
               </li>
             </ul>
             <div className="w-px h-6 bg-neutral-200 mx-2" />
@@ -159,8 +173,29 @@ export function Header({ collections }: HeaderProps) {
             </div>
           </div>
 
-          {/* Mobile Right Section: User */}
-          <div className="md:hidden pointer-events-auto flex items-center gap-3">
+          {/* Mobile Right Section: Post Property + User */}
+          <div className="md:hidden pointer-events-auto flex items-center gap-2">
+            {/* Post Property pill button on mobile header */}
+            <div className="relative">
+              <span className="absolute -top-1 -right-0.5 z-10 bg-amber-400 text-[6px] font-black text-black px-1 py-0.5 rounded-full leading-none uppercase">FREE</span>
+              {mounted && user ? (
+                <Link
+                  href="/post-property"
+                  className="flex items-center px-2 py-1 bg-[#e8202a] text-white text-[8px] font-black uppercase tracking-wide rounded-full shadow-sm"
+                >
+                  Post Property
+                </Link>
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="flex items-center px-2 py-1 bg-[#e8202a] text-white text-[8px] font-black uppercase tracking-wide rounded-full shadow-sm"
+                >
+                  Post Property
+                </button>
+              )}
+            </div>
+
+            {/* User avatar / login icon */}
             {mounted && user ? (
               <Link href="/profile" className="relative flex items-center justify-center w-8 h-8 rounded-full bg-white/20 backdrop-blur-md hover:bg-white/30 transition-colors text-neutral-900 overflow-hidden">
                 {user.user_metadata?.avatar_url ? (
@@ -186,6 +221,7 @@ export function Header({ collections }: HeaderProps) {
             )}
           </div>
         </nav>
+
       </header>
 
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />

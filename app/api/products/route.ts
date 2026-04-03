@@ -58,22 +58,34 @@ export async function GET(request: NextRequest) {
 
         // 2. Radius Search for Properties
         if (!isNaN(lat) && !isNaN(lng)) {
-            const { data, error } = await supabase.rpc('get_nearby_properties', {
+            // Try RPC first for spatial accuracy
+            const { data: rpcData, error: rpcError } = await supabase.rpc('get_nearby_properties', {
                 user_lat: lat,
                 user_lng: lng,
                 radius_meters: radius * 1000
             });
 
-            if (!error && data) {
-                return NextResponse.json(data.map(mapPropertyToProduct));
+            if (!rpcError && rpcData && rpcData.length > 0) {
+                // RPC doesn't return all columns — fetch full data for these IDs
+                const ids = (rpcData as any[]).map((p: any) => p.id);
+                const { data: fullData, error: fullError } = await supabase
+                    .from('properties')
+                    .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,amenities,built_up_area,furnishing_status,floor_number,total_floors')
+                    .in('id', ids)
+                    .eq('available_for_sale', true);
+
+                if (!fullError && fullData) {
+                    return NextResponse.json(fullData.map(mapPropertyToProduct));
+                }
+                // Fallback: return RPC data as-is
+                return NextResponse.json(rpcData.map(mapPropertyToProduct));
             }
-            // If error (e.g. function doesn't exist yet), fall through to standard fetch & JS filter?
-            // For now, let's assume the migration runs. If not, we return standard list.
             console.warn("Spatial query failed or no data, returning standard list.");
         }
 
+
         // 3. Standard List (Existing Logic)
-        const CACHE_KEY = 'all_properties_v4';
+        const CACHE_KEY = 'all_properties_v5'; // v5: includes amenities, built_up_area, furnishing_status etc.
         const cached = cacheGet(CACHE_KEY);
         if (cached) {
             return NextResponse.json(cached);
@@ -81,7 +93,7 @@ export async function GET(request: NextRequest) {
 
         const { data, error } = await supabase
             .from("properties")
-            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
+            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,amenities,built_up_area,furnishing_status,floor_number,total_floors')
             .eq('available_for_sale', true)
             .order('created_at', { ascending: false })
             .limit(50);
@@ -188,7 +200,7 @@ export async function POST(request: NextRequest) {
 
         let dbQuery = supabase
             .from("properties")
-            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
+            .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,amenities,built_up_area,furnishing_status,floor_number,total_floors')
             .limit(safeLimit);
 
         // Apply base filter
@@ -208,7 +220,7 @@ export async function POST(request: NextRequest) {
             // Check if the query matches a location field directly.
             const { data: strictData, error: strictError } = await supabase
                 .from("properties")
-                .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
+                .select('id,handle,title,description,price_range,currency_code,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,seo,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,amenities,built_up_area,furnishing_status,floor_number,total_floors')
                 .eq('available_for_sale', true)
                 // Phase 2: Thinking (Server SQL - City, Area, Address)
                 .or(`city.ilike.%${safeQuery}%,locality.ilike.%${safeQuery}%,state.ilike.%${safeQuery}%,address.ilike.%${safeQuery}%`)

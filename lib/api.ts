@@ -237,17 +237,29 @@ export async function getProducts(params?: {
         radius_meters: radius
       });
 
-      if (!rpcError && nearby) {
-        let results = (nearby as any[]).map(mapPropertyToProduct);
-        console.log(`Server getProducts: Coordinate search found ${results.length} results within ${radius/1000}km`);
-        return results;
+      if (!rpcError && nearby && (nearby as any[]).length > 0) {
+        // RPC doesn't return all columns — fetch complete data by IDs
+        const ids = (nearby as any[]).map((p: any) => p.id);
+        const { data: fullData, error: fullError } = await supabase
+          .from('properties')
+          .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
+          .in('id', ids)
+          .eq('available_for_sale', true);
+
+        if (!fullError && fullData) {
+          console.log(`Server getProducts: Coordinate search found ${fullData.length} results within ${radius/1000}km`);
+          return fullData.map(mapPropertyToProduct);
+        }
+        // Fallback to RPC data
+        return (nearby as any[]).map(mapPropertyToProduct);
       }
       console.warn('Server getProducts: Coordinate search RPC error or no results:', rpcError);
     }
 
+
     let dbQuery = supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type"')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
       .limit(safeLimit);
 
     // Apply base filter
@@ -267,7 +279,7 @@ export async function getProducts(params?: {
       // Check if the query matches a location field directly.
       const { data: strictData, error: strictError } = await supabase
         .from("properties")
-        .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality')
+        .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type",state,city,locality,"amenities","built_up_area","furnishing_status","floor_number","total_floors"')
         .eq('available_for_sale', true)
         .eq('status', 'approved')
         // Phase 2: Thinking (Server SQL Multi-Column)
@@ -489,7 +501,7 @@ export async function getUserProducts(userId: string): Promise<Product[]> {
   try {
     const { data, error } = await supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,"price","location","address","type",view_count,created_at')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,"price","location","address","type",view_count,created_at,"amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
       .eq('user_id', userId)
       .order('created_at', { ascending: false }); // Ensure Newest First
 
@@ -550,7 +562,7 @@ export async function getCollectionProducts(params: {
 
     let dbQuery = supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
       .eq('category_id', collectionData.id)
       .eq('available_for_sale', true)
       .limit(50);
@@ -669,7 +681,14 @@ export async function createProduct(data: any, token?: string): Promise<Product>
       longitude: data.longitude,
       "googleMapsLink": data.googleMapsLink,
       amenities: data.amenities,
-      featured_image: data.images?.[0] ? { url: data.images[0], altText: data.title } : null
+      featured_image: data.images?.[0] ? { url: data.images[0], altText: data.title } : null,
+      state: data.state,
+      city: data.city,
+      locality: data.locality,
+      built_up_area: data.builtUpArea,
+      furnishing_status: data.furnishingStatus,
+      floor_number: data.floorNumber,
+      total_floors: data.totalFloors
     };
 
     // 3. Insert directly into Supabase (bypassing CSRF/API)

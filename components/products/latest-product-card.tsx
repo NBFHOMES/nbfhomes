@@ -186,14 +186,35 @@ export function LatestProductCard({
             </p>
           </div>
 
-          {/* Amenities / Features (Mocked based on image, or use tags) */}
-          <div className="flex items-center gap-2 text-xs text-neutral-600 font-medium">
-            <div className="flex items-center gap-1">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-              <span>Available</span>
-            </div>
-            <span className="text-neutral-300">•</span>
-            <span>Verified Owner</span>
+          {/* Amenities / Features */}
+          <div className="flex items-center flex-wrap gap-2 text-[10px] text-neutral-600 font-medium">
+            {product.furnishingStatus && (
+              <div className="flex items-center gap-1 bg-neutral-100 px-2 py-1 rounded-full">
+                <span className="capitalize">{product.furnishingStatus.replace('_', ' ')}</span>
+              </div>
+            )}
+            {product.builtUpArea && (
+              <div className="flex items-center gap-1 bg-neutral-100 px-2 py-1 rounded-full">
+                <span>{product.builtUpArea} sq.ft</span>
+              </div>
+            )}
+            {product.amenities && product.amenities.length > 0 && (
+              <div className="flex items-center gap-1 bg-neutral-100 px-2 py-1 rounded-full">
+                <span>+{product.amenities.length} Amenities</span>
+              </div>
+            )}
+            {(!product.furnishingStatus && !product.builtUpArea && (!product.amenities || product.amenities.length === 0)) && (
+              <div className="flex items-center gap-1 text-xs">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                <span>Available</span>
+              </div>
+            )}
+            {product.is_verified && (
+               <span className="text-green-600 text-xs font-bold flex items-center ml-auto">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-0.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                 Verified
+               </span>
+            )}
           </div>
 
           <div className="text-xl font-bold text-neutral-900">

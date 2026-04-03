@@ -157,8 +157,14 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
   // Helper to check amenity availability
   const hasAmenity = (name: string) => product.amenities?.includes(name);
 
-  // Filter Active Amenities for display
+  // Filter Active Amenities for display (predefined ones with icons)
   const activeAmenities = ALL_AMENITIES.filter(item => hasAmenity(item.id));
+
+  // Custom amenities: ones saved that don't match any predefined ID
+  const predefinedIds = new Set(ALL_AMENITIES.map(a => a.id));
+  const customAmenities = (product.amenities || []).filter(a => !predefinedIds.has(a));
+
+  const hasAnyAmenity = activeAmenities.length > 0 || customAmenities.length > 0;
 
   // Map Generation: 100% Exact Pinpoint using Coordinates (if available)
   let mapEmbedUrl = '';
@@ -406,7 +412,7 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
                 Amenities & Features
               </h2>
 
-              {activeAmenities.length > 0 ? (
+              {activeAmenities.length > 0 || customAmenities.length > 0 ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {activeAmenities.map((item) => {
                     const Icon = item.icon;
@@ -421,6 +427,16 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
                       </div>
                     );
                   })}
+                  {customAmenities.map((amenity) => (
+                    <div key={amenity} className="flex flex-col items-center justify-center p-4 rounded-xl border border-neutral-100 bg-neutral-50/50 hover:bg-neutral-100 transition-all text-center gap-3 group">
+                      <div className="w-10 h-10 rounded-full bg-white border border-neutral-200 flex items-center justify-center text-neutral-900 shadow-sm group-hover:scale-110 transition-transform">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <span className="text-xs font-bold uppercase tracking-wide text-neutral-700">
+                        {amenity}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-neutral-500 text-sm italic py-4">
@@ -428,6 +444,7 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
                 </p>
               )}
             </div>
+
 
             {/* Location & Map Section (Expanded) */}
             <div className="bg-white p-6 md:p-8 rounded-2xl border border-neutral-200 shadow-sm" id="location">
