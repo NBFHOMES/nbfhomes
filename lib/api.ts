@@ -677,18 +677,18 @@ export async function createProduct(data: any, token?: string): Promise<Product>
       "location": data.location,
       "address": data.address,
       "type": data.type,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      "googleMapsLink": data.googleMapsLink,
-      amenities: data.amenities,
+      latitude: data.latitude || null,
+      longitude: data.longitude || null,
+      "googleMapsLink": data.googleMapsLink || null,
+      amenities: data.amenities?.length ? data.amenities : null,
       featured_image: data.images?.[0] ? { url: data.images[0], altText: data.title } : null,
-      state: data.state,
-      city: data.city,
-      locality: data.locality,
-      built_up_area: data.builtUpArea,
-      furnishing_status: data.furnishingStatus,
-      floor_number: data.floorNumber,
-      total_floors: data.totalFloors
+      state: data.state || null,
+      city: data.city || null,
+      locality: data.locality || null,
+      built_up_area: data.builtUpArea !== '' && data.builtUpArea !== undefined ? Number(data.builtUpArea) : null,
+      furnishing_status: data.furnishingStatus || null,
+      floor_number: data.floorNumber !== '' && data.floorNumber !== undefined ? Number(data.floorNumber) : null,
+      total_floors: data.totalFloors !== '' && data.totalFloors !== undefined ? Number(data.totalFloors) : null
     };
 
     // 3. Insert directly into Supabase (bypassing CSRF/API)
@@ -753,19 +753,19 @@ export async function updateProduct(id: string, data: any, token?: string): Prom
       "location": data.location,
       "address": data.address,
       "type": data.type,
-      latitude: data.latitude,
-      longitude: data.longitude,
-      "googleMapsLink": data.googleMapsLink,
-      amenities: data.amenities,
+      latitude: data.latitude || null,
+      longitude: data.longitude || null,
+      "googleMapsLink": data.googleMapsLink || null,
+      amenities: data.amenities?.length ? data.amenities : null,
       featured_image: data.images?.[0] ? { url: data.images[0], altText: data.title } : null,
       updated_at: new Date().toISOString(),
-      state: data.state,
-      city: data.city,
-      locality: data.locality,
-      built_up_area: data.builtUpArea,
-      furnishing_status: data.furnishingStatus,
-      floor_number: data.floorNumber,
-      total_floors: data.totalFloors
+      state: data.state || null,
+      city: data.city || null,
+      locality: data.locality || null,
+      built_up_area: data.builtUpArea !== '' && data.builtUpArea !== undefined ? Number(data.builtUpArea) : null,
+      furnishing_status: data.furnishingStatus || null,
+      floor_number: data.floorNumber !== '' && data.floorNumber !== undefined ? Number(data.floorNumber) : null,
+      total_floors: data.totalFloors !== '' && data.totalFloors !== undefined ? Number(data.totalFloors) : null
     };
 
     // 3. Update directly in Supabase (bypassing CSRF/API)
