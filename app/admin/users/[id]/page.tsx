@@ -5,9 +5,31 @@ import { useParams, useRouter } from 'next/navigation';
 import { getUserDetailsForAdmin } from '@/lib/api';
 import {
     User, Phone, Mail, Calendar, Eye, MessageCircle,
-    ArrowLeft, Download, Ban, Edit, ExternalLink, TrendingUp, Building
+    ArrowLeft, Download, ExternalLink, TrendingUp, Building,
+    Hash, Clock, CheckCircle, AlertCircle, FileText, Home,
+    Briefcase, ShieldCheck
 } from 'lucide-react';
-import { LeadActivityModal } from '@/components/admin/LeadActivityModal';
+
+const CATEGORY_MAP: Record<string, { label: string; emoji: string }> = {
+    student:        { label: 'Student',        emoji: '🎓' },
+    job:            { label: 'Working Pro',    emoji: '💼' },
+    property_owner: { label: 'Property Owner', emoji: '🏠' },
+    business:       { label: 'Business',       emoji: '🏢' },
+};
+
+function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+type TabType = 'timeline' | 'contacts' | 'views' | 'inquiries';
 
 export default function UserDetailsPage() {
     const params = useParams();
@@ -16,11 +38,9 @@ export default function UserDetailsPage() {
 
     const [loading, setLoading] = useState(true);
     const [userData, setUserData] = useState<any>(null);
-    const [activeTab, setActiveTab] = useState<'views' | 'leads' | 'inquiries'>('leads');
-    const [selectedLeads, setSelectedLeads] = useState<any>(null); // This is a view tool call, no replacement content needed., or just table
+    const [activeTab, setActiveTab] = useState<TabType>('timeline');
 
     useEffect(() => {
-        // Hydration check or just fetch
         const load = async () => {
             setLoading(true);
             const data = await getUserDetailsForAdmin(userId);
@@ -36,419 +56,455 @@ export default function UserDetailsPage() {
     }, [userId, router]);
 
     const handleExport = () => {
-        // Implement export logic here (reuse downloadCSV)
-        // flattening data from userData
+        if (!userData) return;
         const rows = [
             ['Type', 'Date', 'Property', 'Action/Details', 'Status'],
             ...(userData.leads || []).map((l: any) => ['Lead', new Date(l.created_at).toLocaleString(), l.property?.title, l.action_type, l.status]),
             ...(userData.views || []).map((v: any) => ['View', new Date(v.created_at).toLocaleString(), v.property?.title, 'Viewed', '-']),
-            ...(userData.inquiries || []).map((i: any) => ['Inquiry', new Date(i.created_at).toLocaleString(), '-', i.message, '-'])
+            ...(userData.inquiries || []).map((i: any) => ['Inquiry', new Date(i.created_at).toLocaleString(), '-', i.message, i.status]),
         ];
-
-        const csvContent = rows.map(e => e.join(",")).join("\n");
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement("a");
+        const csv = rows.map(r => r.map(c => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
-        link.setAttribute("href", url);
-        link.setAttribute("download", `user_activity_${userData.user.first_name}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `user_history_${userData.user?.full_name || userId}.csv`;
+        a.click();
     };
 
-    if (loading) return <div className="p-8">Loading user profile...</div>;
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-10 h-10 rounded-full border-4 border-neutral-200 border-t-neutral-900 animate-spin" />
+                    <p className="text-sm text-neutral-500 font-medium">Loading user history...</p>
+                </div>
+            </div>
+        );
+    }
     if (!userData) return null;
 
     const { user, leads, views, inquiries } = userData;
-    const conversionRate = views.length > 0 ? ((leads.length / views.length) * 100).toFixed(1) : 0;
+    const totalContacts = leads?.length || 0;
+    const totalViews = views?.length || 0;
+    const totalInquiries = inquiries?.length || 0;
+    const conversionRate = totalViews > 0 ? ((totalContacts / totalViews) * 100).toFixed(1) : '0';
 
-    const unifiedHistory = [
-        ...leads.map((l: any) => ({ ...l, interactionType: 'contact', date: new Date(l.created_at), label: l.action_type === 'whatsapp' ? 'WhatsApp' : 'Contact Form' })),
-        ...views.map((v: any) => ({ ...v, interactionType: 'view', date: new Date(v.created_at), label: 'Viewed Property' }))
-    ].sort((a: any, b: any) => b.date.getTime() - a.date.getTime());
+    const catInfo = CATEGORY_MAP[user?.profession] || null;
+    const contactNum = user?.contact_number || user?.phone_number || '';
+    const whatsappNum = user?.whatsapp_number || '';
+    const displayName = user?.full_name || user?.first_name
+        ? `${user?.first_name || ''} ${user?.last_name || ''}`.trim()
+        : (user?.full_name || user?.email?.split('@')[0] || 'Unknown User');
+
+    // Unified timeline: leads + views sorted by date
+    const timeline = [
+        ...(leads || []).map((l: any) => ({
+            ...l,
+            _type: 'contact',
+            _date: new Date(l.created_at),
+            _label: l.action_type === 'whatsapp' ? 'WhatsApp Click' : 'Contact Click',
+        })),
+        ...(views || []).map((v: any) => ({
+            ...v,
+            _type: 'view',
+            _date: new Date(v.created_at),
+            _label: 'Property Viewed',
+        })),
+    ].sort((a, b) => b._date.getTime() - a._date.getTime());
+
+    const tabs: { id: TabType; label: string; count: number; icon: any; color: string }[] = [
+        { id: 'timeline', label: 'All Activity',  count: timeline.length, icon: Clock,         color: 'text-neutral-700' },
+        { id: 'contacts', label: 'Contacts Made', count: totalContacts,   icon: MessageCircle, color: 'text-purple-600' },
+        { id: 'views',    label: 'Properties Viewed', count: totalViews,  icon: Eye,           color: 'text-blue-600' },
+        { id: 'inquiries',label: 'Inquiries',     count: totalInquiries,  icon: FileText,      color: 'text-orange-600' },
+    ];
 
     return (
-        <div className="min-h-screen bg-neutral-50 pb-12">
-            {/* Header */}
-            <header className="bg-white border-b border-neutral-200 sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => router.back()} className="p-2 hover:bg-neutral-100 rounded-full">
+        <div className="min-h-screen bg-neutral-50 pb-16">
+
+            {/* ── Sticky Header ── */}
+            <header className="bg-white border-b border-neutral-200 sticky top-0 z-20 shadow-sm">
+                <div className="max-w-5xl mx-auto px-4 h-14 md:h-16 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button
+                            onClick={() => router.back()}
+                            className="p-2 hover:bg-neutral-100 rounded-xl transition-colors shrink-0"
+                        >
                             <ArrowLeft className="w-5 h-5 text-neutral-600" />
                         </button>
-                        <h1 className="text-lg font-bold text-neutral-900">User Profile</h1>
+                        <div className="min-w-0">
+                            <h1 className="text-base md:text-lg font-bold text-neutral-900 truncate">{displayName}</h1>
+                            <p className="text-xs text-neutral-400 hidden md:block">Complete Activity History</p>
+                        </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={handleExport}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-neutral-300 rounded-lg text-sm font-medium hover:bg-neutral-50"
-                        >
-                            <Download className="w-4 h-4" />
-                            Export Activity
-                        </button>
-                    </div>
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-xl text-sm font-medium hover:bg-neutral-50 transition-colors shrink-0"
+                    >
+                        <Download className="w-4 h-4 text-neutral-500" />
+                        <span className="hidden md:inline">Export CSV</span>
+                    </button>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                {/* Profile Card */}
-                <div className="bg-white rounded-2xl border border-neutral-200 p-6 mb-8">
-                    <div className="flex flex-col md:flex-row gap-8 items-start justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className="w-20 h-20 rounded-full bg-neutral-100 flex items-center justify-center">
-                                <User className="w-10 h-10 text-neutral-400" />
+            <main className="max-w-5xl mx-auto px-4 py-6 space-y-6">
+
+                {/* ── Profile Card ── */}
+                <div className="bg-white rounded-2xl border border-neutral-200 overflow-hidden shadow-sm">
+                    {/* gradient top strip */}
+                    <div className="h-1 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-green-500" />
+                    <div className="p-5 md:p-6">
+                        <div className="flex flex-col sm:flex-row gap-5 items-start">
+                            {/* Avatar */}
+                            <div className="w-16 h-16 rounded-2xl bg-neutral-900 text-white flex items-center justify-center text-2xl font-bold shrink-0 shadow-lg">
+                                {displayName.charAt(0).toUpperCase()}
                             </div>
-                            <div>
-                                <h2 className="text-2xl font-bold text-neutral-900">
-                                    {user.first_name} {user.last_name}
-                                </h2>
-                                <div className="flex items-center gap-2 text-neutral-500 mt-1">
-                                    <span className={`w-2 h-2 rounded-full ${user.role === 'admin' ? 'bg-purple-500' : 'bg-green-500'}`} />
-                                    <span className="text-sm font-medium capitalize">{user.role || 'User'}</span>
-                                    <span className="text-xs text-neutral-400">• Joined {new Date(user.created_at).toLocaleDateString()}</span>
+
+                            {/* Main Info */}
+                            <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
+                                    <h2 className="text-xl font-bold text-neutral-900">{displayName}</h2>
+                                    {user?.status === 'banned' && (
+                                        <span className="px-2 py-0.5 bg-red-100 text-red-700 text-[11px] font-bold rounded-full border border-red-200">🚫 Banned</span>
+                                    )}
+                                    {catInfo && (
+                                        <span className="px-2 py-0.5 bg-neutral-100 text-neutral-700 text-[11px] font-bold rounded-full border border-neutral-200">
+                                            {catInfo.emoji} {catInfo.label}
+                                        </span>
+                                    )}
+                                    {user?.is_verified && (
+                                        <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 text-[11px] font-bold rounded-full border border-blue-200">
+                                            <ShieldCheck className="w-3 h-3" /> Verified
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-sm text-neutral-500 mb-3">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                    Joined {new Date(user?.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </div>
+
+                                {/* Contact Info Grid */}
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {/* Email */}
+                                    <div className="flex items-center gap-2.5 p-2.5 bg-neutral-50 rounded-xl border border-neutral-100">
+                                        <Mail className="w-4 h-4 text-neutral-400 shrink-0" />
+                                        <span className="text-sm text-neutral-700 truncate font-medium">{user?.email || 'N/A'}</span>
+                                    </div>
+
+                                    {/* Contact Number */}
+                                    <div className="flex items-center gap-2.5 p-2.5 bg-blue-50 rounded-xl border border-blue-100">
+                                        <Phone className="w-4 h-4 text-blue-500 shrink-0" />
+                                        {contactNum ? (
+                                            <div className="flex items-center justify-between flex-1 min-w-0">
+                                                <span className="text-sm font-mono font-bold text-blue-800 truncate">+91 {contactNum}</span>
+                                                <a
+                                                    href={`tel:+91${contactNum.replace(/\D/g, '')}`}
+                                                    className="text-[11px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-lg hover:bg-blue-200 transition-colors shrink-0 ml-2"
+                                                >
+                                                    Call
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-neutral-400 italic">No contact number</span>
+                                        )}
+                                    </div>
+
+                                    {/* WhatsApp Number */}
+                                    <div className="flex items-center gap-2.5 p-2.5 bg-green-50 rounded-xl border border-green-100">
+                                        <MessageCircle className="w-4 h-4 text-green-500 shrink-0" />
+                                        {whatsappNum ? (
+                                            <div className="flex items-center justify-between flex-1 min-w-0">
+                                                <span className="text-sm font-mono font-bold text-green-800 truncate">+91 {whatsappNum}</span>
+                                                <a
+                                                    href={`https://wa.me/91${whatsappNum.replace(/\D/g, '')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="text-[11px] font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-lg hover:bg-green-200 transition-colors shrink-0 ml-2"
+                                                >
+                                                    Chat
+                                                </a>
+                                            </div>
+                                        ) : (
+                                            <span className="text-sm text-neutral-400 italic">No WhatsApp number</span>
+                                        )}
+                                    </div>
+
+                                    {/* Properties Listed */}
+                                    <div className="flex items-center gap-2.5 p-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                                        <Home className="w-4 h-4 text-amber-500 shrink-0" />
+                                        <span className="text-sm font-bold text-amber-800">Listed {user?.totalProperties || 0} properties</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 rounded-lg border border-neutral-100">
-                                <Mail className="w-4 h-4 text-neutral-500" />
-                                <div className="text-sm font-medium text-neutral-900">{user.email}</div>
-                            </div>
-                            <div className="flex items-center gap-3 px-4 py-2 bg-neutral-50 rounded-lg border border-neutral-100">
-                                <Phone className="w-4 h-4 text-neutral-500" />
-                                <div className="text-sm font-medium text-neutral-900">{user.phone_number || 'N/A'}</div>
-                            </div>
-                        </div>
                     </div>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <MessageCircle className="w-24 h-24 text-purple-600" />
-                        </div>
-                        <div className="relative z-10">
-                            <div className="text-sm font-medium text-neutral-500 mb-1">Total Contacts Initiated</div>
-                            <div className="text-3xl font-bold text-neutral-900">{leads.length}</div>
-                            <div className="mt-2 text-xs text-purple-600 font-medium bg-purple-50 inline-block px-2 py-1 rounded-full">
-                                Whatsapp / Call Clicks
+                {/* ── Stats Row ── */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {[
+                        { label: 'Properties Viewed',  value: totalViews,     icon: Eye,           bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-100'   },
+                        { label: 'Contacts Made',       value: totalContacts,  icon: MessageCircle, bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100' },
+                        { label: 'Inquiries Sent',      value: totalInquiries, icon: FileText,      bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100' },
+                        { label: 'Conversion Rate',     value: `${conversionRate}%`, icon: TrendingUp, bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
+                    ].map(({ label, value, icon: Icon, bg, text, border }) => (
+                        <div key={label} className={`${bg} border ${border} rounded-xl p-4`}>
+                            <div className={`${text} text-2xl font-bold`}>{value}</div>
+                            <div className="flex items-center gap-1 mt-1">
+                                <Icon className={`w-3 h-3 ${text}`} />
+                                <span className={`text-[11px] font-semibold ${text}`}>{label}</span>
                             </div>
                         </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <Eye className="w-24 h-24 text-blue-600" />
-                        </div>
-                        <div className="relative z-10">
-                            <div className="text-sm font-medium text-neutral-500 mb-1">Total Properties Viewed</div>
-                            <div className="text-3xl font-bold text-neutral-900">{views.length}</div>
-                            <div className="mt-2 text-xs text-blue-600 font-medium bg-blue-50 inline-block px-2 py-1 rounded-full">
-                                Page Visits
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10">
-                            <TrendingUp className="w-24 h-24 text-green-600" />
-                        </div>
-                        <div className="relative z-10">
-                            <div className="text-sm font-medium text-neutral-500 mb-1">Conversion Rate</div>
-                            <div className="text-3xl font-bold text-neutral-900">{conversionRate}%</div>
-                            <div className="mt-2 text-xs text-green-600 font-medium bg-green-50 inline-block px-2 py-1 rounded-full">
-                                Contacts / Views
-                            </div>
-                        </div>
-                    </div>
+                    ))}
                 </div>
 
-                {/* Property Interaction History (Unified) */}
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden mb-8 shadow-sm">
-                    <div className="px-6 py-4 border-b border-neutral-200 bg-neutral-50 flex items-center justify-between">
-                        <h3 className="font-semibold text-neutral-900 flex items-center gap-2">
-                            Activity Timeline
-                            <span className="bg-neutral-200 text-neutral-600 px-2 py-0.5 rounded-full text-xs">{unifiedHistory.length}</span>
-                        </h3>
+                {/* ── Tabs ── */}
+                <div className="bg-white rounded-2xl border border-neutral-200 shadow-sm overflow-hidden">
+                    {/* Tab bar */}
+                    <div className="flex overflow-x-auto border-b border-neutral-200 scrollbar-hide">
+                        {tabs.map(({ id, label, count, icon: Icon, color }) => (
+                            <button
+                                key={id}
+                                onClick={() => setActiveTab(id)}
+                                className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors shrink-0 ${
+                                    activeTab === id
+                                        ? 'border-neutral-900 text-neutral-900'
+                                        : 'border-transparent text-neutral-400 hover:text-neutral-700'
+                                }`}
+                            >
+                                <Icon className={`w-4 h-4 ${activeTab === id ? color : ''}`} />
+                                {label}
+                                <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-bold ${
+                                    activeTab === id ? 'bg-neutral-900 text-white' : 'bg-neutral-100 text-neutral-500'
+                                }`}>{count}</span>
+                            </button>
+                        ))}
                     </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-white text-neutral-500 font-medium border-b border-neutral-100">
-                                <tr>
-                                    <th className="px-6 py-4">Property</th>
-                                    <th className="px-6 py-4">Interaction</th>
-                                    <th className="px-6 py-4">Property Owner</th>
-                                    <th className="px-6 py-4">Date</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-neutral-100">
-                                {unifiedHistory.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={4} className="px-6 py-12 text-center text-neutral-400">
-                                            <div className="flex flex-col items-center justify-center">
-                                                <div className="w-12 h-12 rounded-full bg-neutral-100 flex items-center justify-center mb-3">
-                                                    <TrendingUp className="w-6 h-6 text-neutral-300" />
+
+                    {/* ── Timeline Tab ── */}
+                    {activeTab === 'timeline' && (
+                        <div className="divide-y divide-neutral-100">
+                            {timeline.length === 0 ? (
+                                <EmptyState icon={Clock} text="No activity recorded yet" />
+                            ) : (
+                                timeline.map((item: any, idx: number) => (
+                                    <div key={idx} className="flex items-start gap-4 p-4 hover:bg-neutral-50/50 transition-colors">
+                                        {/* Icon */}
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                            item._type === 'contact'
+                                                ? item.action_type === 'whatsapp' ? 'bg-green-50' : 'bg-purple-50'
+                                                : 'bg-blue-50'
+                                        }`}>
+                                            {item._type === 'contact'
+                                                ? item.action_type === 'whatsapp'
+                                                    ? <MessageCircle className="w-4 h-4 text-green-600" />
+                                                    : <Phone className="w-4 h-4 text-purple-600" />
+                                                : <Eye className="w-4 h-4 text-blue-600" />
+                                            }
+                                        </div>
+
+                                        {/* Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div className="min-w-0">
+                                                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide mb-1 ${
+                                                        item._type === 'contact'
+                                                            ? item.action_type === 'whatsapp' ? 'bg-green-50 text-green-700' : 'bg-purple-50 text-purple-700'
+                                                            : 'bg-blue-50 text-blue-700'
+                                                    }`}>
+                                                        {item._label}
+                                                    </span>
+                                                    <p className="text-sm font-semibold text-neutral-900 truncate">
+                                                        {item.property?.title || item.property_title || 'Unknown Property'}
+                                                    </p>
+                                                    {(item.property?.location || item.property_location) && (
+                                                        <p className="text-xs text-neutral-400">{item.property?.location || item.property_location}</p>
+                                                    )}
                                                 </div>
-                                                <p>No activity recorded yet</p>
+                                                <div className="text-right shrink-0">
+                                                    <p className="text-xs text-neutral-500 font-medium">{timeAgo(item.created_at)}</p>
+                                                    <p className="text-[10px] text-neutral-300">{new Date(item.created_at).toLocaleDateString('en-IN')}</p>
+                                                </div>
                                             </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    unifiedHistory.map((item: any, idx: number) => (
-                                        <tr key={idx} className="hover:bg-neutral-50/50 transition-colors">
-                                            <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    {item.property.images && item.property.images[0] ? (
-                                                        <img
-                                                            src={item.property.images[0]}
-                                                            alt=""
-                                                            className="w-12 h-12 rounded-lg object-cover border border-neutral-200"
-                                                        />
-                                                    ) : (
-                                                        <div className="w-12 h-12 rounded-lg bg-neutral-100 flex items-center justify-center border border-neutral-200">
-                                                            <Building className="w-6 h-6 text-neutral-300" />
-                                                        </div>
-                                                    )}
-                                                    <div>
-                                                        <a
-                                                            href={`/product/${item.property.id}`}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline block truncate max-w-[200px]"
-                                                        >
-                                                            {item.property.title || 'Unknown Property'}
-                                                            <ExternalLink className="w-3 h-3 inline ml-1 opacity-50" />
-                                                        </a>
-                                                        <div className="text-xs text-neutral-500">{item.property.location}</div>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${item.interactionType === 'contact'
-                                                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
-                                                    : 'bg-blue-50 text-blue-700 border border-blue-100'
-                                                    }`}>
-                                                    {item.interactionType === 'contact' ? (
-                                                        <>
-                                                            <MessageCircle className="w-3 h-3" />
-                                                            {item.label}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Eye className="w-3 h-3" />
-                                                            Viewed
-                                                        </>
-                                                    )}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                {item.property.owner ? (
-                                                    <div className="flex flex-col">
-                                                        <span className="font-medium text-neutral-900">
-                                                            {item.property.owner.first_name} {item.property.owner.last_name}
-                                                        </span>
-                                                        <span className="text-xs text-neutral-500">{item.property.owner.email}</span>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-neutral-400 italic">Unknown Owner</span>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Contacts Tab ── */}
+                    {activeTab === 'contacts' && (
+                        <div className="divide-y divide-neutral-100">
+                            {leads.length === 0 ? (
+                                <EmptyState icon={MessageCircle} text="No contacts made yet" />
+                            ) : (
+                                leads.map((lead: any) => (
+                                    <div key={lead.id} className="p-4 hover:bg-neutral-50/50 transition-colors">
+                                        <div className="flex items-start gap-3">
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold uppercase shrink-0 ${
+                                                lead.action_type === 'whatsapp'
+                                                    ? 'bg-green-50 text-green-700 border border-green-100'
+                                                    : 'bg-purple-50 text-purple-700 border border-purple-100'
+                                            }`}>
+                                                {lead.action_type === 'whatsapp'
+                                                    ? <MessageCircle className="w-3 h-3" />
+                                                    : <Phone className="w-3 h-3" />
+                                                }
+                                                {lead.action_type === 'whatsapp' ? 'WhatsApp' : 'Call'}
+                                            </span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-neutral-900 truncate">
+                                                    {lead.property?.title || 'Unknown Property'}
+                                                </p>
+                                                <p className="text-xs text-neutral-400">{lead.property?.location || ''}</p>
+                                                {lead.property?.id && (
+                                                    <a
+                                                        href={`/product/${lead.property.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-700 mt-1"
+                                                    >
+                                                        <ExternalLink className="w-3 h-3" />
+                                                        View Property
+                                                    </a>
                                                 )}
-                                            </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-neutral-500">
-                                                {item.date.toLocaleString()}
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                {/* Tabs */}
-                <div className="mb-6 flex gap-2 border-b border-neutral-200">
-                    <button
-                        onClick={() => setActiveTab('leads')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'leads' ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`}
-                    >
-                        Leads Generated ({leads.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('views')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'views' ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`}
-                    >
-                        Properties Viewed ({views.length})
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('inquiries')}
-                        className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'inquiries' ? 'border-neutral-900 text-neutral-900' : 'border-transparent text-neutral-500 hover:text-neutral-700'}`}
-                    >
-                        Inquiries ({inquiries.length})
-                    </button>
-                </div>
-
-                {/* Tab Content */}
-                <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden min-h-[400px]">
-                    {activeTab === 'leads' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Property</th>
-                                        <th className="px-6 py-4">Action</th>
-                                        <th className="px-6 py-4">Status</th>
-                                        <th className="px-6 py-4">Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100">
-                                    {leads.map((lead: any) => (
-                                        <tr key={lead.id} className="hover:bg-neutral-50/50">
-                                            <td className="px-6 py-4">
-                                                <a
-                                                    href={`/product/${lead.property.id}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="font-medium text-blue-600 hover:text-blue-800 hover:underline block mb-0.5"
-                                                    title="View Property Page"
-                                                >
-                                                    {lead.property.title}
-                                                    <ExternalLink className="w-3 h-3 inline-ml ml-1 opacity-50" />
-                                                </a>
-                                                <div className="text-xs text-neutral-500">{lead.property.location}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-bold uppercase ${lead.action_type === 'whatsapp' ? 'text-green-700 bg-green-50' : 'text-blue-700 bg-blue-50'
-                                                    }`}>
-                                                    {lead.action_type === 'whatsapp' ? <MessageCircle className="w-3 h-3" /> : <Phone className="w-3 h-3" />}
-                                                    {lead.action_type}
-                                                </span>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs capitalize ${lead.status === 'closed' ? 'bg-neutral-100 text-neutral-500' :
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xs text-neutral-500 font-medium">{timeAgo(lead.created_at)}</p>
+                                                <p className="text-[10px] text-neutral-300">{new Date(lead.created_at).toLocaleDateString('en-IN')}</p>
+                                                <span className={`inline-block mt-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                                    lead.status === 'closed' ? 'bg-neutral-100 text-neutral-500' :
                                                     lead.status === 'interested' ? 'bg-purple-50 text-purple-700' :
-                                                        lead.status === 'contacted' ? 'bg-orange-50 text-orange-700' :
-                                                            'bg-yellow-50 text-yellow-700'
-                                                    }`}>
+                                                    lead.status === 'contacted' ? 'bg-orange-50 text-orange-700' :
+                                                    'bg-yellow-50 text-yellow-700'
+                                                }`}>
                                                     {lead.status || 'new'}
                                                 </span>
-                                            </td>
-                                            <td className="px-6 py-4 text-neutral-500">
-                                                {new Date(lead.created_at).toLocaleDateString()}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {leads.length === 0 && (
-                                        <tr>
-                                            <td colSpan={4} className="px-6 py-16 text-center text-neutral-400">
-                                                <div className="flex flex-col items-center justify-center">
-                                                    <MessageCircle className="w-12 h-12 text-neutral-200 mb-3" />
-                                                    <p className="text-lg font-medium text-neutral-900">No leads generated yet</p>
-                                                    <p className="text-sm max-w-xs mx-auto mt-1">This user hasn't contacted any property owners yet.</p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     )}
 
+                    {/* ── Views Tab ── */}
                     {activeTab === 'views' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Property</th>
-                                        <th className="px-6 py-4">Count</th>
-                                        <th className="px-6 py-4">Full URL</th>
-                                        <th className="px-6 py-4">Last Viewed</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100">
-                                    {(() => {
-                                        // Group views by property
-                                        const groupedViews = views.reduce((acc: any, view: any) => {
-                                            const pid = view.property_id;
-                                            if (!acc[pid]) {
-                                                acc[pid] = { ...view, count: 0, latest: view.created_at };
-                                            }
-                                            acc[pid].count += 1;
-                                            if (new Date(view.created_at) > new Date(acc[pid].latest)) {
-                                                acc[pid].latest = view.created_at;
-                                            }
-                                            return acc;
-                                        }, {});
-                                        const uniqueViews = Object.values(groupedViews).sort((a: any, b: any) => new Date(b.latest).getTime() - new Date(a.latest).getTime());
-
-                                        if (uniqueViews.length === 0) {
-                                            return <tr><td colSpan={4} className="px-6 py-12 text-center text-neutral-400">No properties viewed yet</td></tr>;
-                                        }
-
-                                        return uniqueViews.map((view: any) => {
-                                            const fullUrl = `${window.location.origin}/product/${view.property_id}`;
-                                            return (
-                                                <tr key={view.id} className="hover:bg-neutral-50/50">
-                                                    <td className="px-6 py-4">
-                                                        <div className="font-medium text-neutral-900">{view.property.title}</div>
-                                                        <div className="text-xs text-neutral-500">{view.property.location}</div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold">
-                                                            <Eye className="w-3 h-3" />
-                                                            Visited {view.count} times
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-neutral-500 font-mono text-xs select-all">
-                                                        <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-blue-600 truncate max-w-[200px] block">
-                                                            {fullUrl}
-                                                        </a>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-neutral-500">
-                                                        {new Date(view.latest).toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            );
-                                        });
-                                    })()}
-                                </tbody>
-                            </table>
+                        <div className="divide-y divide-neutral-100">
+                            {views.length === 0 ? (
+                                <EmptyState icon={Eye} text="No properties viewed yet" />
+                            ) : (() => {
+                                // Group views by property
+                                const grouped: Record<string, any> = {};
+                                for (const v of views) {
+                                    const pid = v.property_id;
+                                    if (!grouped[pid]) {
+                                        grouped[pid] = { ...v, count: 0, last: v.created_at };
+                                    }
+                                    grouped[pid].count++;
+                                    if (new Date(v.created_at) > new Date(grouped[pid].last)) {
+                                        grouped[pid].last = v.created_at;
+                                    }
+                                }
+                                return Object.values(grouped)
+                                    .sort((a: any, b: any) => new Date(b.last).getTime() - new Date(a.last).getTime())
+                                    .map((view: any) => (
+                                        <div key={view.property_id} className="flex items-center gap-4 p-4 hover:bg-neutral-50/50 transition-colors">
+                                            {/* Property thumb placeholder */}
+                                            <div className="w-12 h-12 rounded-xl bg-neutral-100 border border-neutral-200 flex items-center justify-center shrink-0 overflow-hidden">
+                                                {view.property?.images?.[0] ? (
+                                                    <img src={view.property.images[0]} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <Building className="w-5 h-5 text-neutral-300" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-semibold text-neutral-900 truncate">
+                                                    {view.property?.title || 'Unknown Property'}
+                                                </p>
+                                                <p className="text-xs text-neutral-400">{view.property?.location || ''}</p>
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full mt-1">
+                                                    <Eye className="w-3 h-3" />
+                                                    Visited {view.count} time{view.count !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-xs text-neutral-500 font-medium">{timeAgo(view.last)}</p>
+                                                <p className="text-[10px] text-neutral-300">{new Date(view.last).toLocaleDateString('en-IN')}</p>
+                                                {view.property?.id && (
+                                                    <a
+                                                        href={`/product/${view.property.id}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-700 mt-1"
+                                                    >
+                                                        <ExternalLink className="w-3 h-3" />
+                                                        Open
+                                                    </a>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ));
+                            })()}
                         </div>
                     )}
 
+                    {/* ── Inquiries Tab ── */}
                     {activeTab === 'inquiries' && (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left">
-                                <thead className="bg-neutral-50 text-neutral-500 font-medium border-b border-neutral-100">
-                                    <tr>
-                                        <th className="px-6 py-4">Subject</th>
-                                        <th className="px-6 py-4">Message</th>
-                                        <th className="px-6 py-4">Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-neutral-100">
-                                    {inquiries.map((inq: any) => (
-                                        <tr key={inq.id} className="hover:bg-neutral-50/50">
-                                            <td className="px-6 py-4 font-medium text-neutral-900">
-                                                {inq.subject}
-                                            </td>
-                                            <td className="px-6 py-4 text-neutral-600 max-w-md truncate">
-                                                {inq.message}
-                                            </td>
-                                            <td className="px-6 py-4 text-neutral-500">
-                                                {new Date(inq.created_at).toLocaleDateString()}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {inquiries.length === 0 && (
-                                        <tr><td colSpan={3} className="px-6 py-12 text-center text-neutral-400">No inquiries sent</td></tr>
-                                    )}
-                                </tbody>
-                            </table>
+                        <div className="divide-y divide-neutral-100">
+                            {inquiries.length === 0 ? (
+                                <EmptyState icon={FileText} text="No inquiries or reports sent" />
+                            ) : (
+                                inquiries.map((inq: any) => (
+                                    <div key={inq.id} className="p-4 hover:bg-neutral-50/50 transition-colors">
+                                        <div className="flex items-start gap-3">
+                                            <div className="w-9 h-9 rounded-xl bg-orange-50 border border-orange-100 flex items-center justify-center shrink-0">
+                                                <FileText className="w-4 h-4 text-orange-500" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between gap-2 mb-1">
+                                                    <p className="text-sm font-bold text-neutral-900 truncate">
+                                                        {inq.subject || 'No Subject'}
+                                                    </p>
+                                                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold shrink-0 ${
+                                                        inq.status === 'resolved' ? 'bg-green-50 text-green-700' :
+                                                        inq.status === 'spam' ? 'bg-red-50 text-red-700' :
+                                                        'bg-yellow-50 text-yellow-700'
+                                                    }`}>
+                                                        {inq.status || 'unread'}
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-neutral-600 leading-relaxed line-clamp-2">
+                                                    {inq.message}
+                                                </p>
+                                                <p className="text-[10px] text-neutral-400 mt-1.5 flex items-center gap-1">
+                                                    <Clock className="w-3 h-3" />
+                                                    {timeAgo(inq.created_at)} · {new Date(inq.created_at).toLocaleString('en-IN')}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
                         </div>
                     )}
                 </div>
             </main>
+        </div>
+    );
+}
+
+// Helper: Empty State
+function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-neutral-100 flex items-center justify-center mb-3">
+                <Icon className="w-7 h-7 text-neutral-300" />
+            </div>
+            <p className="text-neutral-500 font-medium">{text}</p>
+            <p className="text-sm text-neutral-400 mt-1">This section will populate as the user interacts with the platform.</p>
         </div>
     );
 }

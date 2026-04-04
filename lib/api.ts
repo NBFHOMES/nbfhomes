@@ -1042,7 +1042,7 @@ export async function trackLead(propertyId: string, type: 'contact' | 'whatsapp'
   }
 }
 
-export async function getAdminUsers(page: number = 1, limit: number = 10, search: string = ''): Promise<{ users: { userId: string; name: string; email: string; contactNumber: string; role: string; isVerified: boolean; totalProperties: number; activeProperties: number; profession: string; status: string; createdAt: string; assignedQrId: string | null }[]; total: number; page: number; limit: number }> {
+export async function getAdminUsers(page: number = 1, limit: number = 10, search: string = ''): Promise<{ users: { userId: string; name: string; email: string; contactNumber: string; whatsappNumber: string; role: string; isVerified: boolean; totalProperties: number; activeProperties: number; profession: string; status: string; createdAt: string; assignedQrId: string | null }[]; total: number; page: number; limit: number }> {
   try {
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -1082,6 +1082,7 @@ export async function getAdminUsers(page: number = 1, limit: number = 10, search
         name: profile.first_name ? `${profile.first_name} ${profile.last_name || ''}`.trim() : (profile.full_name || profile.name || profile.email?.split('@')[0] || 'N/A'),
         email: profile.email || 'N/A',
         contactNumber: profile.contact_number || profile.phone_number || 'N/A',
+        whatsappNumber: profile.whatsapp_number || '',
         role: profile.role || 'user',
         isVerified: profile.is_verified || false,
         totalProperties: totalProperties || 0,
@@ -1171,13 +1172,14 @@ export async function deleteUser(userId: string) {
   }
 }
 
-export async function updateUserProfile(userId: string, profession: string, contactNumber: string): Promise<{ success: boolean; error?: any }> {
+export async function updateUserProfile(userId: string, profession: string, contactNumber: string, whatsappNumber?: string): Promise<{ success: boolean; error?: any }> {
   try {
     const { error } = await supabase
       .from('users')
       .update({
         profession: profession?.trim(),
         contact_number: contactNumber?.trim(),
+        whatsapp_number: (whatsappNumber || contactNumber)?.trim(),
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);

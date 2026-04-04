@@ -37,6 +37,7 @@ interface AdminUser {
     name: string;
     email: string;
     contactNumber: string;
+    whatsappNumber: string;
     role: string;
     isVerified: boolean;
     totalProperties: number;
@@ -44,6 +45,7 @@ interface AdminUser {
     profession: string;
     status: string;
     createdAt: string;
+    assignedQrId: string | null;
 }
 
 function timeAgo(dateString?: string) {
@@ -1124,7 +1126,9 @@ export default function AdminPage() {
                                                 <tr>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">User</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Email</th>
-                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Phone</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">📱 Contact No.</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">💬 WhatsApp No.</th>
+                                                    <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">🎯 Category</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Joined</th>
                                                     <th className="px-6 py-3 text-left text-xs font-medium text-neutral-500 uppercase tracking-wider">Status</th>
                                                     <th className="px-6 py-3 text-right text-xs font-medium text-neutral-500 uppercase tracking-wider">Action</th>
@@ -1133,7 +1137,7 @@ export default function AdminPage() {
                                             <tbody className="bg-white divide-y divide-neutral-200">
                                                 {usersList.length === 0 ? (
                                                     <tr>
-                                                        <td colSpan={6} className="px-6 py-12 text-center text-neutral-500">
+                                                        <td colSpan={9} className="px-6 py-12 text-center text-neutral-500">
                                                             No users found.
                                                         </td>
                                                     </tr>
@@ -1183,23 +1187,46 @@ export default function AdminPage() {
                                                                     </div>
                                                                 )}
                                                             </td>
+                                                            {/* Contact Number */}
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
                                                                 {u.contactNumber && u.contactNumber !== 'N/A' ? (
-                                                                    <div className="flex items-center gap-2">
-                                                                        <div className="flex items-center gap-1.5 bg-neutral-50 px-2 py-1 rounded border border-neutral-100">
-                                                                            <span className="text-xs font-mono">{u.contactNumber}</span>
+                                                                    <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded border border-blue-100 w-fit">
+                                                                        <span className="text-xs font-mono font-medium text-blue-800">+91 {u.contactNumber}</span>
+                                                                    </div>
+                                                                ) : <span className="text-neutral-300 text-xs">Not filled</span>}
+                                                            </td>
+                                                            {/* WhatsApp Number */}
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
+                                                                {(u as any).whatsappNumber ? (
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <div className="flex items-center gap-1.5 bg-green-50 px-2 py-1 rounded border border-green-100">
+                                                                            <span className="text-xs font-mono font-medium text-green-800">+91 {(u as any).whatsappNumber}</span>
                                                                         </div>
                                                                         <a
-                                                                            href={`https://wa.me/${u.contactNumber.replace(/\D/g, '')}`}
+                                                                            href={`https://wa.me/91${(u as any).whatsappNumber.replace(/\D/g, '')}`}
                                                                             target="_blank"
                                                                             rel="noopener noreferrer"
                                                                             className="text-green-600 hover:text-green-700 bg-green-50 p-1 rounded hover:bg-green-100 transition-colors"
-                                                                            title="Chat on WhatsApp"
+                                                                            title="Open WhatsApp"
                                                                         >
                                                                             <MessageCircle className="w-3 h-3" />
                                                                         </a>
                                                                     </div>
-                                                                ) : <span className="text-neutral-300">-</span>}
+                                                                ) : <span className="text-neutral-300 text-xs">Not filled</span>}
+                                                            </td>
+                                                            {/* Category / Profession */}
+                                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                                {u.profession ? (
+                                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                                                                        u.profession === 'student' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                                                        u.profession === 'job' ? 'bg-purple-50 text-purple-700 border-purple-200' :
+                                                                        u.profession === 'property_owner' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                                                        'bg-neutral-50 text-neutral-700 border-neutral-200'
+                                                                    }`}>
+                                                                        {u.profession === 'student' ? '🎓' : u.profession === 'job' ? '💼' : u.profession === 'property_owner' ? '🏠' : '🏢'}
+                                                                        {u.profession === 'student' ? 'Student' : u.profession === 'job' ? 'Working' : u.profession === 'property_owner' ? 'Owner' : u.profession}
+                                                                    </span>
+                                                                ) : <span className="text-neutral-300 text-xs">Not set</span>}
                                                             </td>
                                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-neutral-500">
                                                                 <div className="flex flex-col">
