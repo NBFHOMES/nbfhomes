@@ -29,7 +29,7 @@ function timeAgo(dateStr: string) {
     return new Date(dateStr).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-type TabType = 'timeline' | 'contacts' | 'views' | 'inquiries';
+type TabType = 'timeline' | 'contacts' | 'views' | 'inquiries' | 'received';
 
 export default function UserDetailsPage() {
     const params = useParams();
@@ -63,7 +63,7 @@ export default function UserDetailsPage() {
             ...(userData.views || []).map((v: any) => ['View', new Date(v.created_at).toLocaleString(), v.property?.title, 'Viewed', '-']),
             ...(userData.inquiries || []).map((i: any) => ['Inquiry', new Date(i.created_at).toLocaleString(), '-', i.message, i.status]),
         ];
-        const csv = rows.map(r => r.map(c => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+        const csv = rows.map((r: any[]) => r.map((c: any) => `"${(c || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -84,10 +84,11 @@ export default function UserDetailsPage() {
     }
     if (!userData) return null;
 
-    const { user, leads, views, inquiries } = userData;
+    const { user, leads, views, inquiries, leadsReceived } = userData;
     const totalContacts = leads?.length || 0;
     const totalViews = views?.length || 0;
     const totalInquiries = inquiries?.length || 0;
+    const totalReceived = leadsReceived?.length || 0;
     const conversionRate = totalViews > 0 ? ((totalContacts / totalViews) * 100).toFixed(1) : '0';
 
     const catInfo = CATEGORY_MAP[user?.profession] || null;
@@ -116,6 +117,7 @@ export default function UserDetailsPage() {
     const tabs: { id: TabType; label: string; count: number; icon: any; color: string }[] = [
         { id: 'timeline', label: 'All Activity',  count: timeline.length, icon: Clock,         color: 'text-neutral-700' },
         { id: 'contacts', label: 'Contacts Made', count: totalContacts,   icon: MessageCircle, color: 'text-purple-600' },
+        { id: 'received', label: 'Received Enquiries', count: totalReceived, icon: Hash,        color: 'text-green-600' },
         { id: 'views',    label: 'Properties Viewed', count: totalViews,  icon: Eye,           color: 'text-blue-600' },
         { id: 'inquiries',label: 'Inquiries',     count: totalInquiries,  icon: FileText,      color: 'text-orange-600' },
     ];
@@ -242,12 +244,13 @@ export default function UserDetailsPage() {
                 </div>
 
                 {/* ── Stats Row ── */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                     {[
                         { label: 'Properties Viewed',  value: totalViews,     icon: Eye,           bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-100'   },
                         { label: 'Contacts Made',       value: totalContacts,  icon: MessageCircle, bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-100' },
+                        { label: 'Enquiries Received',  value: totalReceived,  icon: Hash,          bg: 'bg-green-50',  text: 'text-green-700', border: 'border-green-100' },
                         { label: 'Inquiries Sent',      value: totalInquiries, icon: FileText,      bg: 'bg-orange-50', text: 'text-orange-700', border: 'border-orange-100' },
-                        { label: 'Conversion Rate',     value: `${conversionRate}%`, icon: TrendingUp, bg: 'bg-green-50', text: 'text-green-700', border: 'border-green-100' },
+                        { label: 'Conversion Rate',     value: `${conversionRate}%`, icon: TrendingUp, bg: 'bg-neutral-50', text: 'text-neutral-700', border: 'border-neutral-100' },
                     ].map(({ label, value, icon: Icon, bg, text, border }) => (
                         <div key={label} className={`${bg} border ${border} rounded-xl p-4`}>
                             <div className={`${text} text-2xl font-bold`}>{value}</div>
@@ -386,6 +389,79 @@ export default function UserDetailsPage() {
                                         </div>
                                     </div>
                                 ))
+                            )}
+                        </div>
+                    )}
+
+                    {/* ── Received Enquiries Tab ── */}
+                    {activeTab === 'received' && (
+                        <div className="divide-y divide-neutral-100">
+                            {leadsReceived.length === 0 ? (
+                                <EmptyState icon={Hash} text="No enquiries received yet" />
+                            ) : (
+                                leadsReceived.map((lead: any) => {
+                                    const siteUrl = window.location.origin;
+                                    const propertyUrl = `${siteUrl}/product/${lead.property_handle}`;
+                                    const waMessage = encodeURIComponent(
+                                        `Hello ${lead.lead_name}, you visited the property "${lead.property_title}" on NBF Homes. Are you interested in this property?\n\nProperty Link: ${propertyUrl}`
+                                    );
+                                    
+                                    return (
+                                        <div key={lead.id} className="p-4 hover:bg-neutral-50/50 transition-colors">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-neutral-100 flex items-center justify-center text-neutral-500 font-bold">
+                                                        {lead.lead_name.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-neutral-900">{lead.lead_name}</h4>
+                                                        <p className="text-xs text-neutral-500 font-mono">+91 {lead.lead_phone}</p>
+                                                        <div className="flex items-center gap-1.5 mt-1">
+                                                            <span className="text-[10px] text-neutral-400 font-medium">Interested in:</span>
+                                                            <a 
+                                                                href={propertyUrl} 
+                                                                target="_blank" 
+                                                                rel="noopener noreferrer"
+                                                                className="text-[10px] text-blue-600 font-bold hover:underline truncate max-w-[150px]"
+                                                            >
+                                                                {lead.property_title}
+                                                            </a>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex flex-row items-center gap-2">
+                                                    {lead.lead_phone && (
+                                                        <a 
+                                                            href={`tel:+91${lead.lead_phone.replace(/\D/g, '')}`}
+                                                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold border border-blue-100 hover:bg-blue-100 transition-colors"
+                                                        >
+                                                            <Phone className="w-3.5 h-3.5" />
+                                                            Call
+                                                        </a>
+                                                    )}
+                                                    {lead.lead_phone && (
+                                                        <a 
+                                                            href={`https://wa.me/91${lead.lead_phone.replace(/\D/g, '')}?text=${waMessage}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 px-3 py-2 bg-green-50 text-green-700 rounded-lg text-xs font-bold border border-green-100 hover:bg-green-100 transition-colors"
+                                                        >
+                                                            <MessageCircle className="w-3.5 h-3.5" />
+                                                            WhatsApp
+                                                        </a>
+                                                    )}
+                                                    <div className="text-right ml-2 min-w-[70px]">
+                                                        <p className="text-[10px] text-neutral-400 font-medium">{timeAgo(lead.created_at)}</p>
+                                                        <span className="inline-block px-1 py-0.5 bg-neutral-100 text-neutral-500 text-[9px] rounded uppercase font-bold">
+                                                            {lead.action_type}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })
                             )}
                         </div>
                     )}

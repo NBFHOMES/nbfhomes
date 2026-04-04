@@ -1428,13 +1428,52 @@ export async function getUserDetailsForAdmin(userId: string) {
       console.log(`Fetched ${inquiries?.length} inquiries for ${user.email}`);
     }
 
-    // Manual fetch for properties if needed (for leads and views)
+    // 5. Fetch Leads Received (Who contacted this user about THEIR properties)
+    const { data: ownedProperties } = await supabase
+      .from('properties')
+      .select('id, title, handle')
+      .eq('user_id', userId);
+
+    const ownedPropertyIds = (ownedProperties || []).map(p => p.id);
+    let leadsReceived: any[] = [];
+
+    if (ownedPropertyIds.length > 0) {
+      // Fetch leads for these properties (excluding owner's own actions)
+      const { data: receivedData } = await supabase
+        .from('leads_activity')
+        .select('*, user:user_id(id, first_name, last_name, full_name, email, phone_number, contact_number)')
+        .in('property_id', ownedPropertyIds)
+        .neq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (receivedData) {
+        leadsReceived = receivedData.map(lead => {
+          const property = ownedProperties?.find(p => p.id === lead.property_id);
+          const leadUser = lead.user as any;
+          
+          // Flatten user info
+          const leadName = leadUser
+            ? (leadUser.first_name ? `${leadUser.first_name} ${leadUser.last_name || ''}`.trim() : leadUser.full_name || leadUser.email?.split('@')[0] || 'User')
+            : 'Unknown';
+          const leadPhone = leadUser?.contact_number || leadUser?.phone_number || '';
+
+          return {
+            ...lead,
+            lead_name: leadName,
+            lead_phone: leadPhone,
+            property_title: property?.title || 'Unknown',
+            property_handle: property?.handle || property?.id
+          };
+        });
+      }
+    }
+
+    // 6. Manual fetch for properties if needed (for leads and views)
     const propertyIds = new Set([
       ...(leads || []).map((l: any) => l.property_id),
       ...(views || []).map((v: any) => v.property_id)
     ]);
 
-    // Only fetch unique properties if we have any
     let properties: any[] = [];
     let owners: any[] = [];
 
@@ -1456,7 +1495,7 @@ export async function getUserDetailsForAdmin(userId: string) {
       }
     }
 
-    console.log(`[getUserDetailsForAdmin] Fetched for ${userId}: ${leads?.length} leads, ${views?.length} views.`);
+    console.log(`[getUserDetailsForAdmin] Fetched for ${userId}: ${leads?.length} leads, ${views?.length} views, ${leadsReceived.length} received.`);
 
     // Map properties back to items
     const enrichWithPropertyAndOwner = (item: any) => {
@@ -1480,7 +1519,8 @@ export async function getUserDetailsForAdmin(userId: string) {
       user,
       leads: enrichedLeads,
       views: enrichedViews,
-      inquiries: inquiries || []
+      inquiries: inquiries || [],
+      leadsReceived: leadsReceived
     };
 
   } catch (error: any) {
