@@ -236,10 +236,10 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
             {(['name', 'phone', 'otp'] as Step[]).map((s, idx) => (
               <div key={s} className="flex items-center gap-1.5">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold transition-all
-                  ${(step === s || (step === 'done' && idx <= 2)) ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-400'}`}>
+                  ${step === s ? 'bg-black text-white' : 'bg-neutral-100 text-neutral-400'}`}>
                   {idx + 1}
                 </div>
-                {idx < 2 && <div className={`h-0.5 w-8 rounded transition-all ${step !== 'name' && idx === 0 ? 'bg-black' : (step === 'otp' || step === 'done') && idx === 1 ? 'bg-black' : 'bg-neutral-200'}`} />}
+                {idx < 2 && <div className={`h-0.5 w-8 rounded transition-all ${step !== 'name' && idx === 0 ? 'bg-black' : step === 'otp' && idx === 1 ? 'bg-black' : 'bg-neutral-200'}`} />}
               </div>
             ))}
           </div>
