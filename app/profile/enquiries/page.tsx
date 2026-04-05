@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { 
     MessageCircle, Phone, ArrowLeft, Building, 
     Clock, ExternalLink, Hash, Search, User,
-    Calendar, CheckCircle2, ChevronRight
+    Calendar, CheckCircle2, ChevronRight, Plus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { getUserEnquiries } from '@/lib/api';
