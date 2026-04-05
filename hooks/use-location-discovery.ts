@@ -11,7 +11,7 @@ const DEFAULT_LOCATION: GeoLocation = {
   lon: 75.0667,
   city: 'Mandsaur',
   area: 'Central',
-  address: 'Mandsaur, Madhya Pradesh'
+  display_name: 'Mandsaur, Madhya Pradesh'
 };
 
 export function useLocationDiscovery() {
