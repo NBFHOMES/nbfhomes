@@ -6,6 +6,14 @@ import { reverseGeocode, calculateDistance, GeoLocation } from '@/lib/geocoding'
 const LOCATION_STORAGE_KEY = 'nbf_last_location';
 const DISTANCE_THRESHOLD_KM = 10; // Only refresh if moved >10km
 
+const DEFAULT_LOCATION: GeoLocation = {
+  lat: 24.0753,
+  lon: 75.0667,
+  city: 'Mandsaur',
+  area: 'Central',
+  address: 'Mandsaur, Madhya Pradesh'
+};
+
 export function useLocationDiscovery() {
   const [location, setLocation] = useState<GeoLocation | null>(() => {
     if (typeof window !== 'undefined') {
@@ -57,14 +65,22 @@ export function useLocationDiscovery() {
           }
         },
         (err) => {
-          console.error(`Geolocation error (highAccuracy=${highAccuracy}):`, err);
+          // Improved error logging
+          const errorMsg = err.message || (err.code === 1 ? 'Permission denied' : err.code === 2 ? 'Position unavailable' : err.code === 3 ? 'Timeout' : 'Unknown error');
+          console.error(`Geolocation error (code=${err.code}, highAccuracy=${highAccuracy}):`, errorMsg);
+          
           if (highAccuracy && (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE)) {
             fetchInitialPosition(false); // Fallback to low accuracy
           } else {
-            setError(err.message);
+            setError(errorMsg);
+            // If we have no location at all, use default to prevent broken UI
+            if (!location) {
+              console.log('Using default location fallback: Mandsaur');
+              setLocation(DEFAULT_LOCATION);
+            }
           }
         },
-        { enableHighAccuracy: highAccuracy, timeout: highAccuracy ? 35000 : 15000, maximumAge: 60000 }
+        { enableHighAccuracy: highAccuracy, timeout: highAccuracy ? 30000 : 15000, maximumAge: 60000 }
       );
     };
 

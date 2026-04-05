@@ -3,10 +3,10 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useMemo } from 'react';
-import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download, EyeOff, Eye, XCircle } from 'lucide-react';
+import { User, LogOut, MapPin, Phone, Mail, Building, Edit, Trash2, Download, EyeOff, Eye, XCircle, Hash, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { motion } from 'motion/react';
-import { getUserProducts, deleteProduct, updateProduct } from '@/lib/api';
+import { getUserProducts, deleteProduct, updateProduct, getUserEnquiries, getSiteSettings } from '@/lib/api';
 import { Product } from '@/lib/types';
 import { createClient } from '@/lib/supabase/client';
 import { QRPosterModal } from '@/components/unique/qr-poster-modal'; // New Import
@@ -21,6 +21,8 @@ export default function ProfilePage() {
     const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
     const [togglingPropertyId, setTogglingPropertyId] = useState<string | null>(null);
 
+    const [enquiriesCount, setEnquiriesCount] = useState(0);
+    const [howToVideoUrl, setHowToVideoUrl] = useState<string | null>(null);
     const [isMounted, setIsMounted] = useState(false);
 
     // Create client only once using useMemo to prevent multiple instances
@@ -46,10 +48,18 @@ export default function ProfilePage() {
         const fetchUserProperties = async () => {
             if (user) {
                 try {
-                    const userProps = await getUserProducts(user.id);
+                    const [userProps, enquiries, settings] = await Promise.all([
+                        getUserProducts(user.id),
+                        getUserEnquiries(user.id),
+                        getSiteSettings()
+                    ]);
                     setProperties(userProps);
+                    setEnquiriesCount(enquiries.length || 0);
+                    if (settings?.how_to_upload_video_url) {
+                        setHowToVideoUrl(settings.how_to_upload_video_url);
+                    }
                 } catch (error) {
-                    console.error('Error fetching properties:', error);
+                    console.error('Error fetching properties/enquiries:', error);
                 } finally {
                     setLoadingProperties(false);
                 }
@@ -107,6 +117,16 @@ export default function ProfilePage() {
                     { event: 'DELETE', schema: 'public', table: 'properties', filter: `user_id=eq.${user.id}` },
                     (payload) => {
                         setProperties(prev => prev.filter(p => p.id !== payload.old.id));
+                    }
+                )
+                .on(
+                    'postgres_changes',
+                    { event: 'INSERT', schema: 'public', table: 'leads_activity', filter: `owner_id=eq.${user.id}` },
+                    (payload) => {
+                        setEnquiriesCount((prev) => prev + 1);
+                        toast.success('📱 You received a new enquiry!', {
+                            style: { background: '#16a34a', color: '#fff' }
+                        });
                     }
                 )
                 .subscribe();
@@ -252,7 +272,30 @@ export default function ProfilePage() {
                                 <p className="text-[10px] font-bold uppercase text-neutral-500 tracking-wider">Listings</p>
                                 <p className="text-lg font-black text-neutral-900 leading-none mt-1">{properties.length}</p>
                             </div>
-                            {/* Views Removed */}
+                            {properties.length > 0 && (
+                                <button 
+                                    onClick={() => router.push('/profile/enquiries')}
+                                    className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-3 border border-green-500 text-left shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition-all group col-span-1 flex flex-col justify-center gap-1"
+                                >
+                                    <p className="text-[10px] font-bold uppercase text-green-100 tracking-wider flex items-center gap-1">Enquiries Received <MessageCircle className="w-3 h-3 group-hover:animate-bounce" /></p>
+                                    <div className="flex items-end gap-2">
+                                        <p className="text-xl font-black text-white leading-none mt-1">{enquiriesCount}</p>
+                                        <span className="text-xs font-semibold text-green-100 bg-green-700/30 px-1.5 py-0.5 rounded px-2 hover:bg-green-700/50">View All</span>
+                                    </div>
+                                </button>
+                            )}
+                            
+                            {howToVideoUrl && (
+                                <a 
+                                    href={howToVideoUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-blue-50/50 rounded-lg p-3 border border-blue-100 flex flex-col justify-center gap-1 col-span-2 group"
+                                >
+                                    <p className="text-[10px] font-bold uppercase text-blue-600 tracking-wider flex items-center gap-1">Tutorial Video <Eye className="w-3 h-3 group-hover:scale-110 transition-transform" /></p>
+                                    <p className="text-sm font-bold text-blue-900 leading-none">How to Upload Property</p>
+                                </a>
+                            )}
                         </div>
 
                         {/* Desktop Stats (Hidden on Mobile) */}
@@ -261,7 +304,24 @@ export default function ProfilePage() {
                                 <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Total Listings</p>
                                 <p className="text-2xl font-bold text-neutral-900">{properties.length}</p>
                             </div>
-                            {/* Views Removed as per request */}
+                            {properties.length > 0 && (
+                                <button 
+                                    onClick={() => router.push('/profile/enquiries')}
+                                    className="text-left group bg-gradient-to-br from-green-50 to-green-100/50 hover:from-green-100 hover:to-green-200 border border-green-200 p-4 rounded-xl transition-all shadow-sm hover:shadow relative overflow-hidden"
+                                >
+                                    <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 rounded-bl-[100px] -z-10 transition-transform group-hover:scale-110 group-hover:bg-green-500/20" />
+                                    <p className="text-xs font-bold text-green-700 uppercase tracking-wider flex justify-between items-center relative z-10">
+                                        Total Enquiries
+                                        <MessageCircle className="w-4 h-4 text-green-600 group-hover:animate-bounce" />
+                                    </p>
+                                    <div className="mt-2 flex items-end justify-between relative z-10">
+                                        <p className="text-3xl font-black text-green-900 leading-none">
+                                            {enquiriesCount}
+                                        </p>
+                                        <span className="text-[10px] font-bold text-green-800 bg-green-200/50 px-2 py-1 rounded">View All</span>
+                                    </div>
+                                </button>
+                            )}
                             <div className="space-y-1">
                                 <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider">Member Since</p>
                                 <p className="text-sm font-medium text-neutral-900">
@@ -280,10 +340,19 @@ export default function ProfilePage() {
                         <div className="bg-white rounded-xl shadow-sm border border-neutral-200 p-6">
                             <h3 className="font-medium text-neutral-900 mb-4">Dashboard</h3>
                             <nav className="space-y-1">
-                                <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-black bg-neutral-50 rounded-lg">
+                                <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:text-black rounded-lg transition-colors">
                                     <Building className="w-4 h-4" />
                                     My Properties
                                 </button>
+                                {properties.length > 0 && (
+                                    <button 
+                                        onClick={() => router.push('/profile/enquiries')}
+                                        className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:text-black rounded-lg transition-colors"
+                                    >
+                                        <MessageCircle className="w-4 h-4" />
+                                        Enquiries Received
+                                    </button>
+                                )}
                                 <button className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-50 hover:text-black rounded-lg transition-colors">
                                     <MapPin className="w-4 h-4" />
                                     Saved Locations
@@ -292,6 +361,12 @@ export default function ProfilePage() {
                                     <Phone className="w-4 h-4" />
                                     Contact Support
                                 </button>
+                                {howToVideoUrl && (
+                                    <a href={howToVideoUrl} target="_blank" rel="noopener noreferrer" className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-50 rounded-lg transition-colors border border-blue-100 mt-2">
+                                        <Eye className="w-4 h-4 text-blue-600" />
+                                        Upload Property Video
+                                    </a>
+                                )}
                             </nav>
                         </div>
                     </div>

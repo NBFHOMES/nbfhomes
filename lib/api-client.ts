@@ -50,7 +50,7 @@ export const apiClient = {
         return this.request<T>(endpoint, { ...options, method: 'DELETE' });
     },
 
-    async request<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+    async request<T>(endpoint: string, options: FetchOptions = {}, retries = 3): Promise<T> {
         const { params, token, silent, ...init } = options;
 
         let url = `${BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
@@ -97,10 +97,26 @@ export const apiClient = {
             // If not JSON, return empty object or text (casted to T)
             return {} as T;
 
-        } catch (error) {
-            if (!silent) {
-                // Log the error but don't prevent the UI from handling it if needed
-                console.error(`API Request Failed: ${endpoint}`, error);
+        } catch (error: any) {
+            // Retry on fetch failures (TypeError/Network error/Timeout)
+            const isNetworkError = error instanceof TypeError || 
+                                 error.name === 'TimeoutError' || 
+                                 error.name === 'ConnectTimeoutError' ||
+                                 (error.message && error.message.toLowerCase().includes('fetch failed'));
+
+            if (retries > 0 && isNetworkError) {
+                const backoff = (4 - retries) * 1000; // 1s, 2s, 3s backoff
+                console.warn(`[API] Network error for ${endpoint}, retrying in ${backoff}ms... (${retries} left)`, error.message);
+                await new Promise(r => setTimeout(r, backoff));
+                return this.request<T>(endpoint, options, retries - 1);
+            }
+
+            if (!options.silent) {
+                console.error(`[API] Request Failed: ${endpoint}`, {
+                    message: error.message,
+                    status: error.status,
+                    name: error.name
+                });
             }
             throw error;
         }

@@ -82,7 +82,12 @@ export async function checkAdminStatus(legacyUserId?: string): Promise<boolean> 
         }
 
         const isAdmin = !!data && !error;
-        if (!isAdmin) console.log("CheckAdminStatus: Not found in admin_users table");
+        if (!isAdmin) {
+            console.log(`[AUTH AUDIT] User NOT found in admin_users. Current User ID: ${userId}`);
+            console.log(`To fix: Add a row to 'admin_users' table with user_id = '${userId}'`);
+        } else {
+            console.log(`[AUTH AUDIT] Admin access GRANTED for user: ${userId}`);
+        }
 
         // 3. Cache the result
         if (redis && isAdmin) {
@@ -451,7 +456,8 @@ export async function updateSiteSettingsAction(settings: Record<string, string>,
     const supabase = await getSupabaseClient();
     const upserts = Object.entries(settings).map(([key, value]) => ({ key, value }));
     const { error } = await supabase.from('site_settings').upsert(upserts);
-    return { success: !error, error: error?.message };
+    if (error) console.error("SITE SETTINGS UPSERT ERROR:", error);
+    return { success: !error, error: error ? JSON.stringify(error) : null };
 }
 
 export async function deleteAdAction(adminUserId: string) {

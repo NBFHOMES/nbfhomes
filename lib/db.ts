@@ -10,6 +10,14 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Use createBrowserClient on the client side to share session state (cookies)
 // Use createSupabaseClient on the server side (or for static generation)
+// Custom fetch with 30s timeout to prevent 'fetch failed' on slow networks
+const customFetch = (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    return fetch(input, {
+        ...init,
+        signal: init?.signal || AbortSignal.timeout(30000)
+    });
+};
+
 export const supabase = typeof window !== 'undefined'
     ? createBrowserClient(supabaseUrl, supabaseAnonKey, {
         auth: {
@@ -17,6 +25,9 @@ export const supabase = typeof window !== 'undefined'
             autoRefreshToken: true,
             detectSessionInUrl: true,
             flowType: 'pkce',
+        },
+        global: {
+            fetch: customFetch
         },
         cookieOptions: {
             name: 'nbf_v5_final',
@@ -34,5 +45,8 @@ export const supabase = typeof window !== 'undefined'
     : createSupabaseClient(supabaseUrl, supabaseAnonKey, {
         auth: {
             persistSession: false,
+        },
+        global: {
+            fetch: customFetch
         }
     })

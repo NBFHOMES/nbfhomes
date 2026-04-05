@@ -173,27 +173,32 @@ export function OnboardingModal({ isOpen, onComplete }: OnboardingModalProps) {
     }, 100); // 50 steps × 100ms = 5 seconds
   };
 
-  // ── SAVE TO SUPABASE
   const handleSave = async () => {
     if (!user?.id) return;
     setSaving(true);
     const finalWhatsapp = sameAsContact ? contactNumber : whatsappNumber;
     try {
-      await supabase.from('users').update({
+      const { error } = await supabase.from('users').upsert({
+        id: user.id, // Explicitly provide ID for upsert
         full_name: name.trim(),
         contact_number: contactNumber.replace(/\D/g, ''),
         whatsapp_number: finalWhatsapp.replace(/\D/g, ''),
         profession: category,
+        category: category, // Syncing both columns
         updated_at: new Date().toISOString(),
-      }).eq('id', user.id);
+      }, { onConflict: 'id' });
+
+      if (error) throw error;
 
       localStorage.setItem('nbf_onboarding_v2_done', 'true');
-    } catch (e) {
-      console.error('Onboarding save error:', e);
-    } finally {
-      setSaving(false);
       setStep('done');
       setTimeout(() => { onComplete(); }, 1400);
+    } catch (e: any) {
+      console.error('Onboarding save error:', e);
+      // In a real app we would use a toast here
+      alert('Error saving your profile: ' + (e.message || 'Unknown error'));
+    } finally {
+      setSaving(false);
     }
   };
 

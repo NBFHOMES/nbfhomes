@@ -1,33 +1,41 @@
-import re
+import os
 import sys
 
-def check_file(filename):
-    with open(filename, 'r', encoding='utf-8') as f:
+def check_brackets(file_path):
+    with open(file_path, 'r', encoding='utf-8') as f:
         content = f.read()
-
-    # We will strip out strings and comments to avoid counting them
-    # But since it's just a quick check, let's just use a simple stack
+    
     stack = []
-    lines = content.split('\n')
-    for i, line in enumerate(lines):
-        for j, char in enumerate(line):
-            if char in '{[(':
-                stack.append((char, i+1))
-            elif char in '}])':
-                if not stack:
-                    print(f"Excess closing bracket {char} at line {i+1}")
-                    return
-                top, top_line = stack.pop()
-                if (top == '{' and char != '}') or \
-                   (top == '[' and char != ']') or \
-                   (top == '(' and char != ')'):
-                    print(f"Mismatched bracket at line {i+1}: expected match for {top} from line {top_line}, found {char}")
-                    return
-
+    brackets = {'(': ')', '{': '}', '[': ']'}
+    for i, char in enumerate(content):
+        if char in brackets.keys():
+            stack.append((char, i))
+        elif char in brackets.values():
+            if not stack:
+                return False, f"Unmatched closing bracket '{char}' at index {i}"
+            top, pos = stack.pop()
+            if brackets[top] != char:
+                return False, f"Mismatched brackets '{top}' and '{char}' at indices {pos} and {i}"
+    
     if stack:
-        for char, line in stack:
-            print(f"Unclosed {char} starting at line {line}")
-    else:
-        print("All brackets match!")
+        char, pos = stack[0]
+        return False, f"Unmatched opening bracket '{char}' at index {pos}"
+    
+    return True, "All brackets matched"
 
-check_file('app/admin/page.tsx')
+def main(directory):
+    for root, dirs, files in os.walk(directory):
+        for file in files:
+            if file.endswith(('.tsx', '.ts')):
+                path = os.path.join(root, file)
+                # print(f"Checking {path}...")
+                success, msg = check_brackets(path)
+                if not success:
+                    print(f"ERROR in {path}: {msg}")
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1:
+        main(sys.argv[1])
+    else:
+        main('app')
+        main('components')

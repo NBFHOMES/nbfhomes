@@ -158,7 +158,8 @@ export default function AdminPage() {
     const [settings, setSettings] = useState({
         homepage_title: '',
         homepage_description: '',
-        whatsapp_number: ''
+        whatsapp_number: '',
+        how_to_upload_video_url: ''
     });
 
     // Pagination & Filter state
@@ -213,7 +214,8 @@ export default function AdminPage() {
             setSettings({
                 homepage_title: data.homepage_title || '',
                 homepage_description: data.homepage_description || '',
-                whatsapp_number: data.whatsapp_number || ''
+                whatsapp_number: data.whatsapp_number || '',
+                how_to_upload_video_url: data.how_to_upload_video_url || ''
             });
         } finally {
             setLoading(false);
@@ -295,7 +297,7 @@ export default function AdminPage() {
         if (!user) return;
         const res = await updateSiteSettingsAction(settings, user.id);
         if (res.success) alert('Settings saved successfully');
-        else alert('Failed to save settings');
+        else alert('Failed to save settings: ' + res.error);
     };
 
     const handleUserPropertiesClick = async (userId: string, userName: string) => {
@@ -379,7 +381,8 @@ export default function AdminPage() {
             setSettings({
                 homepage_title: settingsData.homepage_title || '',
                 homepage_description: settingsData.homepage_description || '',
-                whatsapp_number: settingsData.whatsapp_number || ''
+                whatsapp_number: settingsData.whatsapp_number || '',
+                how_to_upload_video_url: settingsData.how_to_upload_video_url || ''
             });
             setDashboardStats(dashStats);
             setRecentActivity(activityData);
@@ -1454,45 +1457,28 @@ export default function AdminPage() {
                 {
                     activeTab === 'settings' && (
                         <div className="max-w-2xl mx-auto space-y-6">
-                            <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200">
-                                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Website Settings</h2>
+
+
+                            <div className="bg-white p-6 rounded-xl shadow-sm border border-neutral-200 mt-6">
+                                <h2 className="text-lg font-semibold text-neutral-900 mb-4">Tutorials & Guides</h2>
                                 <form onSubmit={handleSettingsSave} className="space-y-4">
                                     <div>
-                                        <label className="block text-sm font-medium text-neutral-700 mb-1">Homepage Title (SEO)</label>
+                                        <label className="block text-sm font-medium text-neutral-700 mb-1">How To Upload Property Video URL</label>
                                         <input
-                                            type="text"
-                                            value={settings.homepage_title}
-                                            onChange={(e) => setSettings({ ...settings, homepage_title: e.target.value })}
+                                            type="url"
+                                            value={settings.how_to_upload_video_url}
+                                            onChange={(e) => setSettings({ ...settings, how_to_upload_video_url: e.target.value })}
                                             className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                                            placeholder="e.g. Find Your Perfect Home"
+                                            placeholder="e.g. https://youtube.com/watch?v=..."
                                         />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-neutral-700 mb-1">Homepage Description (SEO)</label>
-                                        <textarea
-                                            value={settings.homepage_description}
-                                            onChange={(e) => setSettings({ ...settings, homepage_description: e.target.value })}
-                                            className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900 h-24"
-                                            placeholder="e.g. Discover verified rooms and flats..."
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-neutral-700 mb-1">Global WhatsApp Number</label>
-                                        <input
-                                            type="text"
-                                            value={settings.whatsapp_number}
-                                            onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
-                                            className="w-full px-4 py-2 border border-neutral-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-900"
-                                            placeholder="e.g. 917470724553"
-                                        />
-                                        <p className="text-xs text-neutral-500 mt-1">Used for 'Contact Us' and Application buttons. Format: CountryCode+Number (no symbols).</p>
+                                        <p className="text-xs text-neutral-500 mt-1">This link will appear on the user's profile page as a tutorial video button.</p>
                                     </div>
                                     <div className="pt-4">
                                         <button
                                             type="submit"
                                             className="w-full px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors font-medium"
                                         >
-                                            Save Changes
+                                            Save Tutorial Link
                                         </button>
                                     </div>
                                 </form>

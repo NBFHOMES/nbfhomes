@@ -230,7 +230,7 @@ export async function getProducts(params?: {
     // --- Priority 0: Geo-Proximity Search (Coordinate based) ---
     // If explicit coordinates are provided, we prioritize the RPC spatial query
     if (params?.lat && params?.lng) {
-      const radius = params.radius || 10000; // Default 10km
+      const radius = params.radius || 60000; // Default 60km as per user requirement
       const { data: nearby, error: rpcError } = await supabase.rpc('get_nearby_properties', {
         user_lat: params.lat,
         user_lng: params.lng,
@@ -321,11 +321,11 @@ export async function getProducts(params?: {
           const geoData = await geoRes.json();
           if (geoData && geoData.length > 0) {
             const { lat, lon } = geoData[0];
-            // STRICT: Found a place, so we ONLY look nearby (20km).
+            // STRICT: Found a place, so we ONLY look nearby (60km).
             const { data: nearby, error: rpcError } = await supabase.rpc('get_nearby_properties', {
               user_lat: parseFloat(lat),
               user_lng: parseFloat(lon),
-              radius_meters: 20000 // 20km Radius
+              radius_meters: 60000 // 60km Radius
             });
 
             if (!rpcError && nearby) {
@@ -765,7 +765,10 @@ export async function updateProduct(id: string, data: any, token?: string): Prom
       built_up_area: data.builtUpArea !== '' && data.builtUpArea !== undefined ? Number(data.builtUpArea) : null,
       furnishing_status: data.furnishingStatus || null,
       floor_number: data.floorNumber !== '' && data.floorNumber !== undefined ? Number(data.floorNumber) : null,
-      total_floors: data.totalFloors !== '' && data.totalFloors !== undefined ? Number(data.totalFloors) : null
+      total_floors: data.totalFloors !== '' && data.totalFloors !== undefined ? Number(data.totalFloors) : null,
+      // RESET APPROVAL ON UPDATE
+      status: 'pending',
+      available_for_sale: false
     };
 
     // 3. Update directly in Supabase (bypassing CSRF/API)
@@ -777,6 +780,18 @@ export async function updateProduct(id: string, data: any, token?: string): Prom
       .single();
 
     if (error) throw error;
+
+    // TRIGGER NOTIFICATION for Update
+    try {
+      const { sendNewPropertyNotificationAction } = await import('@/app/actions');
+      await sendNewPropertyNotificationAction(
+        `[UPDATE] ${updatedProperty.title}`,
+        updatedProperty.location || 'N/A',
+        updatedProperty.price?.toString() || '0'
+      );
+    } catch (notifError) {
+      console.error('Failed to send admin update notification:', notifError);
+    }
 
     return mapPropertyToProduct(updatedProperty);
   } catch (e: any) {
@@ -1642,3 +1657,81 @@ export async function getRecentActivity(limit: number = 10) {
     return [];
   }
 }
+
+export async function getUserEnquiries(userId: string) {
+  try {
+    // 1. Fetch properties owned by this user
+    const { data: ownedProperties } = await supabase
+      .from('properties')
+      .select('id, title, handle, location')
+      .eq('user_id', userId);
+
+    const ownedPropertyIds = (ownedProperties || []).map(p => p.id);
+    const propertiesCount = ownedProperties?.length || 0;
+
+    if (ownedPropertyIds.length === 0) {
+      return { enquiries: [], propertiesCount: 0 };
+    }
+
+    // 2. Fetch leads for these properties (excluding owner's own actions)
+    // Refactor to manual join: Fetch leads first, then users
+    const { data: leads } = await supabase
+      .from('leads_activity')
+      .select('*')
+      .in('property_id', ownedPropertyIds)
+      .order('created_at', { ascending: false });
+
+    if (!leads || leads.length === 0) {
+      return { enquiries: [], propertiesCount };
+    }
+
+    // 3. Manual Fetch for User Details (Resilience against missing FKs)
+    const userIds = Array.from(new Set(leads.map(l => l.user_id).filter(id => id && id.length > 10)));
+    let usersData: any[] = [];
+    
+    if (userIds.length > 0) {
+        const { data: userData } = await supabase
+            .from('users')
+            .select('id, first_name, last_name, full_name, email, phone_number, contact_number')
+            .in('id', userIds);
+        usersData = userData || [];
+    }
+
+    const usersMap = usersData.reduce((acc: any, u: any) => {
+        acc[u.id] = u;
+        return acc;
+    }, {});
+
+    // 4. Map/Flatten data
+    const enrichedEnquiries = leads.map(lead => {
+      const property = ownedProperties?.find(p => p.id === lead.property_id);
+      const leadUser = usersMap[lead.user_id];
+      
+      const leadName = leadUser
+        ? (leadUser.first_name ? `${leadUser.first_name} ${leadUser.last_name || ''}`.trim() : leadUser.full_name || leadUser.email?.split('@')[0] || 'User')
+        : 'Unknown';
+      const leadPhone = leadUser?.contact_number || leadUser?.phone_number || '';
+
+      return {
+        id: lead.id,
+        created_at: lead.created_at,
+        action_type: lead.action_type || 'contact',
+        
+        lead_name: leadName,
+        lead_phone: leadPhone,
+        lead_email: leadUser?.email || 'N/A',
+        
+        property_id: lead.property_id,
+        property_title: property?.title || 'Unknown',
+        property_handle: property?.handle || property?.id
+      };
+    });
+
+    return { enquiries: enrichedEnquiries, propertiesCount };
+
+  } catch (error) {
+    console.error('Error in getUserEnquiries:', error);
+    return { enquiries: [], propertiesCount: 0 };
+  }
+}
+

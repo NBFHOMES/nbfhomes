@@ -28,14 +28,38 @@ export function UserOnboardingManager() {
     const [hasChecked, setHasChecked] = useState(false);
 
     useEffect(() => {
+        // Skip if already checked in this session (even if unmounted/remounted)
+        if (typeof window !== 'undefined' && (window as any)._nbf_onboarding_checked) {
+            return;
+        }
+
         async function checkOnboarding() {
             if (isLoading || !user || hasChecked) return;
 
-            // Fast-path: localStorage cache
+            // 1. Check if user is admin - Admins bypass onboarding
+            try {
+                const { data: adminData } = await supabase
+                    .from('admin_users')
+                    .select('user_id')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                if (adminData) {
+                    console.log('Admin detected, bypassing onboarding');
+                    (window as any)._nbf_onboarding_checked = true;
+                    setHasChecked(true);
+                    return;
+                }
+            } catch (e) { /* ignore */ }
+
+            // 2. Fast-path: localStorage cache
             const cached = localStorage.getItem('nbf_onboarding_v2_done');
             if (cached === 'true') {
-                // Even if cached, do a quick silent DB verify to catch stale cache
-                // (only once per session via hasChecked flag)
+                // Mark as checked for this session so we don't keep hitting the DB on every internal navigation
+                (window as any)._nbf_onboarding_checked = true;
+                setHasChecked(true);
+                
+                // Silent background verify (only once)
                 try {
                     const { data } = await supabase
                         .from('users')
@@ -43,19 +67,16 @@ export function UserOnboardingManager() {
                         .eq('id', user.id)
                         .single();
 
-                    // If DB says empty, invalidate cache and show modal
                     if (!data?.contact_number || !data?.whatsapp_number || !data?.profession) {
                         localStorage.removeItem('nbf_onboarding_v2_done');
+                        (window as any)._nbf_onboarding_checked = false;
                         setShowModal(true);
                     }
-                } catch {
-                    // Network error — don't block the user
-                }
-                setHasChecked(true);
+                } catch { /* network err */ }
                 return;
             }
 
-            // No cache → always do full DB check
+            // 3. No cache -> full DB check
             try {
                 const { data, error } = await supabase
                     .from('users')
@@ -63,24 +84,18 @@ export function UserOnboardingManager() {
                     .eq('id', user.id)
                     .single();
 
-                if (error) {
-                    // PGRST116 = no row found = brand new user
-                    if (error.code === 'PGRST116') {
-                        setShowModal(true);
-                        return;
-                    }
+                if (error && error.code !== 'PGRST116') {
                     console.error('Error checking user onboarding:', error);
                     return;
                 }
 
-                const needsOnboarding =
-                    !data?.contact_number || !data?.whatsapp_number || !data?.profession;
+                const needsOnboarding = !data?.contact_number || !data?.whatsapp_number || !data?.profession;
 
                 if (needsOnboarding) {
                     setShowModal(true);
                 } else {
-                    // All fields complete — set cache
                     localStorage.setItem('nbf_onboarding_v2_done', 'true');
+                    (window as any)._nbf_onboarding_checked = true;
                 }
             } catch (err) {
                 console.error('Onboarding check error:', err);

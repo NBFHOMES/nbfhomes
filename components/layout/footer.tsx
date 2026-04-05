@@ -70,8 +70,6 @@ export async function Footer() {
                 <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
                 <li><Link href="/reviews" className="hover:text-white transition-colors">Customer Reviews</Link></li>
                 <li><Link href="/connect" className="hover:text-white transition-colors">Connect & Socials</Link></li>
-                <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-                <li><Link href="/sustainability" className="hover:text-white transition-colors">Sustainability</Link></li>
               </ul>
             </div>
 
@@ -92,7 +90,6 @@ export async function Footer() {
               <ul className="flex flex-col gap-4 text-neutral-400">
                 <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/cookies" className="hover:text-white transition-colors">Cookie Policy</Link></li>
               </ul>
             </div>
 

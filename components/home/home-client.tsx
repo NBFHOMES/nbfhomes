@@ -34,6 +34,7 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
     const [nearbyLocationName, setNearbyLocationName] = useState<string | null>(null);
     const [lastFetchCoords, setLastFetchCoords] = useState<{lat: number, lon: number} | null>(null);
     const [isSearchingNearby, setIsSearchingNearby] = useState(false);
+    const [isError, setIsError] = useState(false);
     const { location, loading: locationLoading, permissionState, updateLocation } = useLocationDiscovery();
 
     const [mounted, setMounted] = useState(false);
@@ -93,9 +94,11 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
                 console.log('[Real-time] UI Refresh triggered for new property.');
             })
             .subscribe((status: any) => {
-                console.log('[Real-time] Subscription status:', status);
+                if (status === 'SUBSCRIBED') {
+                    console.log('[Real-time] Connected successfully.');
+                }
                 if (status === 'CHANNEL_ERROR') {
-                    console.error('[Real-time] FAILED to connect. Check if Realtime is enabled in Supabase Dashboard.');
+                    console.warn('[Real-time] Connection failed. Live updates disabled, but app will still work on refresh.');
                 }
             });
 
@@ -112,71 +115,64 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
         }
     }, [initialProducts]);
 
-    // 3. Smart Discovery: Auto-detect location and find nearby properties (with Throttling)
-    useEffect(() => {
-        if (!mounted || !location?.lat || !location?.lon) return;
+    const handleLocationDiscovery = useCallback(async () => {
+        if (!location?.lat || !location?.lon) return;
 
-        const handleLocationDiscovery = async () => {
-            const { calculateDistance } = require('@/lib/geocoding');
-            
-            // --- THROTTLING LOGIC ---
-            // If we have data for THIS location (within 5km now for better sensitivity) AND it's < 30 mins old, SKIP fetch.
-            if (lastFetchCoords) {
-                const dist = calculateDistance(location.lat, location.lon, lastFetchCoords.lat, lastFetchCoords.lon);
-                // Reduce threshold to 5km to address "stuck" feeling, while keeping stability
-                if (dist < 5) return; 
-            }
+        const { calculateDistance } = require('@/lib/geocoding');
+        
+        // --- THROTTLING LOGIC ---
+        if (lastFetchCoords) {
+            const dist = calculateDistance(location.lat, location.lon, lastFetchCoords.lat, lastFetchCoords.lon);
+            if (dist < 5) return; 
+        }
 
-            setIsSearchingNearby(true);
-            const locationDisplayName = location.area && location.area !== location.city 
-                ? `${location.area}, ${location.city}` 
-                : (location.city || "Nearby Areas");
-            
-            console.log(`Smart Discovery: Browser reported coords (${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}) -> ${locationDisplayName}`);
+        setIsSearchingNearby(true);
+        setIsError(false);
+        const locationDisplayName = location.area && location.area !== location.city 
+            ? `${location.area}, ${location.city}` 
+            : (location.city || "Nearby Areas");
+        
+        console.log(`Smart Discovery: Coords (${location.lat.toFixed(4)}, ${location.lon.toFixed(4)}) -> ${locationDisplayName}`);
 
-            try {
-                // --- SMART DISCOVERY (BROADENED) ---
-                // We use a multi-stage approach:
-                // 1. Search by City/Area Name (Explicit match)
-                // 2. Search by Radius (Spatial match)
+        try {
+            let results = await getProducts({ 
+                lat: location.lat, 
+                lng: location.lon, 
+                radius: 60000 
+            });
+
+            if (results && results.length > 0) {
+                const radiusLabel = locationDisplayName ? `Nearby ${locationDisplayName}` : `Nearby`;
+                setFilteredProducts(results);
+                setNearbyLocationName(radiusLabel);
                 
-                console.log(`Smart Discovery: Starting search for ${location.city} / ${location.area}...`);
-                // Use a single query for up to 60km to prevent ECONNRESET from multiple API calls
-                console.log(`Smart Discovery: Checking up to 60km spatial radius...`);
-                let results = await getProducts({ 
-                    lat: location.lat, 
-                    lng: location.lon, 
-                    radius: 60000 
-                });
-
-                if (results && results.length > 0) {
-                    const radiusLabel = locationDisplayName ? `Nearby ${locationDisplayName}` : `Nearby`;
-                    setFilteredProducts(results);
-                    setNearbyLocationName(radiusLabel);
-                    
-                    const freshCache = {
-                        products: results,
-                        locationName: radiusLabel,
-                        coords: { lat: location.lat, lon: location.lon },
-                        timestamp: Date.now()
-                    };
-                    setLastFetchCoords(freshCache.coords);
-                    localStorage.setItem(DISCOVERY_CACHE_KEY, JSON.stringify(freshCache));
-                } else {
-                    // Stage 3: Empty Search (Nothing found even at 100km)
-                    setFilteredProducts([]);
-                    setNearbyLocationName(`No properties available in your area (${location.city || 'Nearby'})`);
-                    localStorage.removeItem(DISCOVERY_CACHE_KEY);
-                }
-                setIsSearchingNearby(false);
-            } catch (error) {
-                console.error('Smart Discovery Error:', error);
-                setIsSearchingNearby(false);
+                const freshCache = {
+                    products: results,
+                    locationName: radiusLabel,
+                    coords: { lat: location.lat, lon: location.lon },
+                    timestamp: Date.now()
+                };
+                setLastFetchCoords(freshCache.coords);
+                localStorage.setItem(DISCOVERY_CACHE_KEY, JSON.stringify(freshCache));
+            } else {
+                setFilteredProducts([]);
+                setNearbyLocationName(`No properties available in your area (${location.city || 'Nearby'})`);
+                localStorage.removeItem(DISCOVERY_CACHE_KEY);
             }
-        };
+        } catch (error) {
+            console.error('Smart Discovery Error:', error);
+            setIsError(true);
+        } finally {
+            setIsSearchingNearby(false);
+        }
+    }, [location, lastFetchCoords]);
 
-        handleLocationDiscovery();
-    }, [mounted, location, lastFetchCoords]);
+    // 3. Smart Discovery Effect
+    useEffect(() => {
+        if (mounted) {
+            handleLocationDiscovery();
+        }
+    }, [mounted, location, handleLocationDiscovery]);
 
     const handleSearch = useCallback(async (query: string) => {
         if (!query.trim()) {
@@ -336,7 +332,21 @@ export function HomeClient({ initialProducts, ads = [] }: HomeClientProps) {
                 </div>
 
                 <div suppressHydrationWarning className="w-full">
-                    {filteredProducts.length > 0 ? (
+                    {isError ? (
+                        <div className="flex flex-col items-center justify-center py-20 bg-red-50/50 rounded-3xl border border-red-100/50" suppressHydrationWarning>
+                             <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center text-3xl mb-4">
+                                📶
+                            </div>
+                            <h3 className="text-xl font-bold text-neutral-900 mb-2">Connection Problem</h3>
+                            <p className="text-neutral-500 mb-6 text-center max-w-xs">We're having trouble reaching our servers. Please check your data or WiFi.</p>
+                            <button
+                                onClick={() => handleLocationDiscovery()}
+                                className="bg-black text-white px-8 py-3 rounded-full text-sm font-bold uppercase tracking-widest hover:scale-105 transition-transform shadow-lg flex items-center gap-2"
+                            >
+                                <Navigation className="w-4 h-4" /> Try Again
+                            </button>
+                        </div>
+                    ) : filteredProducts.length > 0 ? (
                         <div className="flex flex-col gap-y-10 p-4 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 md:gap-x-8 md:gap-y-12" suppressHydrationWarning>
                             {filteredProducts.map((product: any, index: number) => (
                                 <LatestProductCard

@@ -81,9 +81,7 @@ export function NotificationBadge() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {notification.message}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                  </p>
+                  {/* Date removed for clean UI */}
                 </div>
                 {!notification.read && (
                   <Button
