@@ -54,7 +54,7 @@ export default function ProfilePage() {
                         getSiteSettings()
                     ]);
                     setProperties(userProps);
-                    setEnquiriesCount(enquiries.length || 0);
+                    setEnquiriesCount(enquiries.enquiries?.length || 0);
                     if (settings?.how_to_upload_video_url) {
                         setHowToVideoUrl(settings.how_to_upload_video_url);
                     }
