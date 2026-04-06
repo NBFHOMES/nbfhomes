@@ -454,7 +454,7 @@ function PostPropertyContent() {
             const payload = {
                 ...formData,
                 description: finalDescription,
-                userId: user?.id
+                user_id: user.id
             };
 
             let result;
@@ -662,7 +662,31 @@ function PostPropertyContent() {
                     {/* STEP 1: ESSENTIALS */}
                     {step === 1 && (
                         <div className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                            <h2 className="text-xl font-semibold mb-6">Basic Details</h2>
+                            <h2 className="text-xl font-semibold mb-6">Property Details</h2>
+
+                            {/* Category Selection */}
+                            <div>
+                                <label className="block text-sm font-medium text-neutral-700 mb-3">Select Category / कैटेगरी चुनें</label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    {[
+                                        { id: 'PG', label: 'PG' },
+                                        { id: 'Hostel', label: 'Hostel' },
+                                        { id: 'Apartment', label: 'Room / Flat' }
+                                    ].map(cat => (
+                                        <button
+                                            key={cat.id}
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, type: cat.id }))}
+                                            className={`py-3 px-2 rounded-xl border-2 transition-all font-bold text-sm ${formData.type === cat.id
+                                                ? 'bg-neutral-900 text-white border-neutral-900 shadow-md'
+                                                : 'bg-white text-neutral-500 border-neutral-100 hover:border-neutral-300'
+                                                }`}
+                                        >
+                                            {cat.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
 
                             <div>
                                 <label className="block text-sm font-medium text-neutral-700 mb-1">Property Title</label>

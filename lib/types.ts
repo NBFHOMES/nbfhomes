@@ -77,6 +77,8 @@ export interface Product {
   furnishingStatus?: string;
   floorNumber?: number;
   totalFloors?: number;
+  sharingType?: string;
+  pincode?: string;
 }
 
 export interface Collection {

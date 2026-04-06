@@ -323,7 +323,7 @@ export default async function ProductPage(props: { params: Promise<{ handle: str
                 </div>
                 <div>
                   <p className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Type</p>
-                  <p className="text-sm font-bold text-neutral-900">{product.tags?.[0] || 'Property'}</p>
+                  <p className="text-sm font-bold text-neutral-900">{product.type || product.tags?.[0] || 'Property'}</p>
                 </div>
               </div>
 

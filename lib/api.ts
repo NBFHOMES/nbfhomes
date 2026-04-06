@@ -242,7 +242,7 @@ export async function getProducts(params?: {
         const ids = (nearby as any[]).map((p: any) => p.id);
         const { data: fullData, error: fullError } = await supabase
           .from('properties')
-          .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
+          .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality","pincode"')
           .in('id', ids)
           .eq('available_for_sale', true);
 
@@ -259,7 +259,7 @@ export async function getProducts(params?: {
 
     let dbQuery = supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality","pincode"')
       .limit(safeLimit);
 
     // Apply base filter
@@ -501,7 +501,7 @@ export async function getUserProducts(userId: string): Promise<Product[]> {
   try {
     const { data, error } = await supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,"price","location","address","type",view_count,created_at,"amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,"price","location","address","type",view_count,created_at,"amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality","pincode"')
       .eq('user_id', userId)
       .order('created_at', { ascending: false }); // Ensure Newest First
 
@@ -562,7 +562,7 @@ export async function getCollectionProducts(params: {
 
     let dbQuery = supabase
       .from("properties")
-      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality"')
+      .select('id,handle,title,description,price_range,featured_image,tags,available_for_sale,category_id,"contactNumber",user_id,"bathroomType","securityDeposit","electricityStatus","tenantPreference",latitude,longitude,"googleMapsLink",is_verified,status,view_count,created_at,"price","location","address","type","amenities","built_up_area","furnishing_status","floor_number","total_floors","state","city","locality","pincode"')
       .eq('category_id', collectionData.id)
       .eq('available_for_sale', true)
       .limit(50);
@@ -685,6 +685,7 @@ export async function createProduct(data: any, token?: string): Promise<Product>
       state: data.state || null,
       city: data.city || null,
       locality: data.locality || null,
+      pincode: data.pincode || null,
       built_up_area: data.builtUpArea !== '' && data.builtUpArea !== undefined ? Number(data.builtUpArea) : null,
       furnishing_status: data.furnishingStatus || null,
       floor_number: data.floorNumber !== '' && data.floorNumber !== undefined ? Number(data.floorNumber) : null,
@@ -762,6 +763,7 @@ export async function updateProduct(id: string, data: any, token?: string): Prom
       state: data.state || null,
       city: data.city || null,
       locality: data.locality || null,
+      pincode: data.pincode || null,
       built_up_area: data.builtUpArea !== '' && data.builtUpArea !== undefined ? Number(data.builtUpArea) : null,
       furnishing_status: data.furnishingStatus || null,
       floor_number: data.floorNumber !== '' && data.floorNumber !== undefined ? Number(data.floorNumber) : null,

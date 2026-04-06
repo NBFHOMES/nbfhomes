@@ -84,6 +84,7 @@ export const mapPropertyToProduct = (prop: any): Product => {
         state: prop.state,
         city: prop.city,
         locality: prop.locality,
+        pincode: prop.pincode,
         builtUpArea: prop.built_up_area,
         furnishingStatus: prop.furnishing_status,
         floorNumber: prop.floor_number,
