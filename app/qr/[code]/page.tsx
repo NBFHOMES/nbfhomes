@@ -95,6 +95,9 @@ export default async function QRRedirectPage({ params }: { params: Promise<{ cod
         // Fallback (should never reach here)
         redirect('/');
     } catch (err: any) {
+        // Handle Next.js redirection errors (they must be re-thrown)
+        if (err.message === 'NEXT_REDIRECT') throw err;
+
         console.error(`[QR Scan] Global Error:`, err);
         return (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px', background: '#fff' }}>
